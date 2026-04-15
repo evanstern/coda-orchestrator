@@ -17,9 +17,14 @@ Generate a SOUL.md file for a coda orchestrator named "$name".
 The user described the personality as:
 "$speech"
 
-Output ONLY the markdown content (no code fences). Use this structure:
+Rules:
+- Output ONLY the raw markdown. No preamble, no explanation, no code fences.
+- The very first line of your output must be: # SOUL.md — $name
+- Do NOT start with "Here is" or any other introduction.
 
-# SOUL.md u2014 $name
+Structure:
+
+# SOUL.md — $name
 
 ## Identity
 Name, what this orchestrator does, its scope.
@@ -40,17 +45,20 @@ Be concise. Match the tone the user described. No filler.
 PROMPT
         )
 
-        result=$(
-            opencode run --format json "$prompt" 2>/dev/null \
+        local raw
+        raw=$(
+            opencode run --pure --format json "$prompt" 2>/dev/null \
                 | jq -r 'select(.type == "text") | .part.text // empty' 2>/dev/null
         )
+        # Strip any preamble before the heading
+        result=$(printf '%s\n' "$raw" | sed -n '/^# SOUL\.md/,$p')
     fi
 
     if [ -n "$result" ]; then
         echo "$result"
     else
         cat <<EOF
-# SOUL.md u2014 $name
+# SOUL.md — $name
 
 ## Identity
 Name: $name
