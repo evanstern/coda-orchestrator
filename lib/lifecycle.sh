@@ -25,7 +25,12 @@ _orch_find_free_port() {
 
 _orch_is_running() {
     local name="$1"
-    tmux has-session -t "$(_orch_session_name "$name")" 2>/dev/null
+    if tmux has-session -t "$(_orch_session_name "$name")" 2>/dev/null; then
+        return 0
+    fi
+    # Clean stale port file if session is dead
+    rm -f "$(_orch_dir "$name")/port"
+    return 1
 }
 
 _orch_new() {
@@ -66,9 +71,8 @@ _orch_new() {
         sed -i "s/{{NAME}}/$name/g" "$dir/SOUL.md"
     fi
 
-    # Scope
     if [ -n "$scope_pattern" ]; then
-        printf '{"watch":["%s"],"ignore":["coda-orch--*"]}\n' "$scope_pattern" > "$dir/scope.json"
+        printf '{"watch":["%s"],"ignore":["coda-orch--*","coda-mcp-server","coda-watcher"]}\n' "$scope_pattern" > "$dir/scope.json"
     else
         cp "$_ORCH_PLUGIN_DIR/defaults/scope.json.tmpl" "$dir/scope.json"
     fi

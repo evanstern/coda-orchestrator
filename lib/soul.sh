@@ -7,7 +7,9 @@ _orch_generate_soul() {
     local name="$1"
     local speech="$2"
 
-    if command -v opencode &>/dev/null; then
+    local result=""
+
+    if command -v opencode &>/dev/null && command -v jq &>/dev/null; then
         local prompt
         prompt=$(cat <<PROMPT
 Generate a SOUL.md file for a coda orchestrator named "$name".
@@ -37,12 +39,16 @@ What's worth remembering, what to discard.
 Be concise. Match the tone the user described. No filler.
 PROMPT
         )
-        opencode run --format json "$prompt" 2>/dev/null \
-            | jq -r '.[-1].content // empty' 2>/dev/null
+
+        result=$(
+            opencode run --format json "$prompt" 2>/dev/null \
+                | jq -r 'select(.type == "text") | .part.text // empty' 2>/dev/null
+        )
     fi
 
-    # Fallback if opencode or jq failed: write the raw speech as a basic soul
-    if [ ${PIPESTATUS[0]:-1} -ne 0 ] || [ -z "$(cat)" ] 2>/dev/null; then
+    if [ -n "$result" ]; then
+        echo "$result"
+    else
         cat <<EOF
 # SOUL.md u2014 $name
 
