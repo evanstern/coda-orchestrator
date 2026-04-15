@@ -92,7 +92,7 @@ _orch_new() {
     fi
 
     # MEMORY.md
-    printf '# Memory u2014 %s\n\nNo observations yet.\n' "$name" > "$dir/MEMORY.md"
+    printf '# Memory — %s\n\nNo observations yet.\n' "$name" > "$dir/MEMORY.md"
 
     _orch_generate_agents_md "$name" > "$dir/AGENTS.md"
     _orch_generate_project_config "$name" > "$dir/opencode.json"
@@ -157,8 +157,8 @@ Do NOT act on sessions outside your scope.
 ## Memory Protocol
 
 You wake up fresh each session. Your continuity comes from:
-- **memory/YYYY-MM-DD.md** u2014 daily raw observations. Create if missing.
-- **MEMORY.md** u2014 curated learnings. Update when you notice patterns worth keeping.
+- **memory/YYYY-MM-DD.md** — daily raw observations. Create if missing.
+- **MEMORY.md** — curated learnings. Update when you notice patterns worth keeping.
 
 ## Interaction
 

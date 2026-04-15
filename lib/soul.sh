@@ -58,7 +58,7 @@ PROMPT
         echo "$result"
     else
         cat <<EOF
-# SOUL.md u2014 $name
+# SOUL.md — $name
 
 ## Identity
 Name: $name
