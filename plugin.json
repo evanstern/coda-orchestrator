@@ -5,7 +5,7 @@
   "coda": ">=0.1.0",
 
   "dependencies": {
-    "system": ["opencode", "jq"]
+    "system": ["opencode", "jq", "git"]
   },
 
   "provides": {

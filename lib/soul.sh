@@ -51,7 +51,7 @@ PROMPT
                 | jq -r 'select(.type == "text") | .part.text // empty' 2>/dev/null
         )
         # Strip any preamble before the heading
-        result=$(echo "$raw" | sed -n '/^# SOUL\.md/,$p')
+        result=$(printf '%s\n' "$raw" | sed -n '/^# SOUL\.md/,$p')
     fi
 
     if [ -n "$result" ]; then

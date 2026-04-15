@@ -73,7 +73,9 @@ _orch_new() {
     mkdir -p "$dir/memory"
 
     git init -q "$dir"
-    git -C "$dir" add -A && git -C "$dir" commit -q -m 'init orchestrator' --allow-empty
+    git -C "$dir" add -A && \
+        git -C "$dir" -c user.name='coda orch' -c user.email='coda-orch@local' \
+            commit -q -m 'init orchestrator' --allow-empty
 
     # Generate or copy SOUL.md
     if [ -n "$soul_text" ]; then

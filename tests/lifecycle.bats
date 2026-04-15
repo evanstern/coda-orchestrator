@@ -2,9 +2,8 @@
 
 setup() {
     export CODA_ORCH_DIR="$BATS_TEST_TMPDIR/orchestrators"
-    export ORCH_BASE_DIR="$CODA_ORCH_DIR"
-    export ORCH_PORT_BASE=4250
-    export ORCH_PORT_RANGE=10
+    export CODA_ORCH_PORT_BASE=4250
+    export CODA_ORCH_PORT_RANGE=10
     export SESSION_PREFIX="coda-test-"
 
     PLUGIN_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
