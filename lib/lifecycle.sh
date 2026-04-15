@@ -14,8 +14,17 @@ _orch_dir() {
 _orch_find_free_port() {
     local port=$ORCH_PORT_BASE
     local max=$((ORCH_PORT_BASE + ORCH_PORT_RANGE))
+
+    local claimed_ports=""
+    if [ -d "$ORCH_BASE_DIR" ]; then
+        for pf in "$ORCH_BASE_DIR"/*/port; do
+            [ -f "$pf" ] && claimed_ports="$claimed_ports $(cat "$pf")"
+        done
+    fi
+
     while [ "$port" -le "$max" ]; do
-        if ! ss -tlnp 2>/dev/null | grep -q ":${port} "; then
+        if ! ss -tlnp 2>/dev/null | grep -q ":${port} " && \
+           ! echo "$claimed_ports" | grep -qw "$port"; then
             echo "$port"
             return
         fi
@@ -63,6 +72,9 @@ _orch_new() {
 
     mkdir -p "$dir/memory"
 
+    git init -q "$dir"
+    git -C "$dir" add -A && git -C "$dir" commit -q -m 'init orchestrator' --allow-empty
+
     # Generate or copy SOUL.md
     if [ -n "$soul_text" ]; then
         _orch_generate_soul "$name" "$soul_text" > "$dir/SOUL.md"
@@ -80,8 +92,8 @@ _orch_new() {
     # MEMORY.md
     printf '# Memory u2014 %s\n\nNo observations yet.\n' "$name" > "$dir/MEMORY.md"
 
-    # Generate AGENTS.md
     _orch_generate_agents_md "$name" > "$dir/AGENTS.md"
+    _orch_generate_project_config "$name" > "$dir/opencode.json"
 
     echo "Created orchestrator: $name"
     echo "  Dir:  $dir"
@@ -89,43 +101,72 @@ _orch_new() {
     echo "  Start with: coda orch start $name"
 }
 
+_orch_generate_project_config() {
+    local name="$1"
+    printf '{"instructions": ["SOUL.md", "MEMORY.md"]}\n'
+}
+
 _orch_generate_agents_md() {
     local name="$1"
     local dir
     dir="$(_orch_dir "$name")"
 
+    # Header
+    cat <<'HEADER'
+# IDENTITY OVERRIDE
+
+**You are NOT Claude Code. You are NOT a generic assistant.**
+
+You are a specialized orchestrator agent. Your name, personality, role, and
+boundaries are defined below. When asked who you are, respond with your
+orchestrator identity — never as "Claude Code" or "Anthropic's CLI agent".
+
+Follow the personality defined below precisely.
+HEADER
+
+    # Inline SOUL.md — this IS the personality
+    if [ -f "$dir/SOUL.md" ]; then
+        printf '\n---\n\n'
+        cat "$dir/SOUL.md"
+        printf '\n\n---\n\n'
+    fi
+
+    # Inline MEMORY.md — continuity across sessions
+    if [ -f "$dir/MEMORY.md" ]; then
+        printf '## Long-term Memory\n\n'
+        cat "$dir/MEMORY.md"
+        printf '\n\n'
+    fi
+
+    # Operational instructions
     cat <<EOF
-# Orchestrator: $name
+## Your Scope
 
-You are a coda orchestrator. Read these files at the start of every session:
+You observe and manage coda sessions that match the patterns in scope.json.
+Do NOT act on sessions outside your scope.
 
-1. **SOUL.md** u2014 your personality, tone, boundaries, and decision defaults
-2. **MEMORY.md** u2014 your curated long-term memory
-3. **scope.json** u2014 which sessions you watch
+## Capabilities
 
-## Your Role
-
-You observe and manage coda sessions that match your scope. You can:
 - Check status of sessions in your scope via \`coda orch status $name\`
-- Send prompts to your own session or report findings
 - Capture observations in memory/ daily files (memory/YYYY-MM-DD.md)
 - Curate important learnings into MEMORY.md
+- Read SOUL.md and MEMORY.md for your current personality and context
 
 ## Memory Protocol
 
-You wake up fresh each session. These files are your continuity:
+You wake up fresh each session. Your continuity comes from:
 - **memory/YYYY-MM-DD.md** u2014 daily raw observations. Create if missing.
 - **MEMORY.md** u2014 curated learnings. Update when you notice patterns worth keeping.
 
 ## Interaction
 
-Other agents and humans can send you prompts via \`coda orch send $name "message"\`.
-Respond according to your SOUL.md personality and boundaries.
+Other agents and humans send you prompts via \`coda orch send $name "message"\`.
+Respond according to the personality defined above.
 
 ## Important
 
+- Stay in character. Your SOUL.md defines who you are.
 - Stay within your scope. Don't act on sessions outside your watch patterns.
-- Follow your SOUL.md boundaries for proactivity and interruption thresholds.
 - When uncertain, observe and record rather than act.
 EOF
 }
@@ -156,6 +197,9 @@ _orch_start() {
         return 0
     fi
 
+    _orch_generate_agents_md "$name" > "$dir/AGENTS.md"
+    _orch_generate_project_config "$name" > "$dir/opencode.json"
+
     local port
     port=$(_orch_find_free_port)
     if [ -z "$port" ]; then
@@ -164,11 +208,11 @@ _orch_start() {
     fi
 
     local permission='{"*":"allow"}'
-    local serve_cmd="OPENCODE_PERMISSION='$permission' opencode serve --port $port"
-
-    tmux new-session -d -s "$session" -c "$dir" "$serve_cmd; exec $SHELL"
+    local serve_cmd="OPENCODE_PERMISSION='$permission' opencode serve --pure --port $port"
 
     echo "$port" > "$dir/port"
+
+    tmux new-session -d -s "$session" -c "$dir" "$serve_cmd; exec $SHELL"
 
     echo "Orchestrator started: $name"
     echo "  Session: $session"
