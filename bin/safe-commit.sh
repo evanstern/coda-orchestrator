@@ -32,4 +32,4 @@ for file in $STAGED; do
 done
 
 echo "All staged files are whitelisted. Committing..."
-git commit "$@"
+git commit "$@" && git push origin main
