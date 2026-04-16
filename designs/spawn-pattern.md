@@ -1,6 +1,6 @@
 # Design: Feature Session Spawn Pattern
 
-## Status: Draft
+## Status: Validated
 ## Cards: #38, #39, #31
 
 ## Problem
@@ -10,76 +10,120 @@ Spawning a feature session and briefing it reliably requires:
 2. A reliable trigger mechanism (not tmux send-keys)
 3. Atomic setup before the session starts
 
-Today all three are manual and error-prone.
+## Key Discovery
+
+`opencode run --attach http://localhost:<port> --format json "message"` works.
+
+Verified live: sent a message to the running orchestrator session via its port
+file and received a full streamed JSON response. No tmux. No pane targeting.
+No Enter keystroke issues.
+
+The ACP (Agent Client Protocol) stream emits JSON events:
+- `{"type":"text", ..."text":"..."}` -- agent response chunks
+- `{"type":"step_finish", ..."reason":"stop"}` -- completion signal
+
+This is the mechanism for #38. tmux send-keys is retired.
 
 ## The Pattern
 
 ### Phase 1: Prepare (before session boots)
 
 ```bash
-# 1. Write brief
-cat > worktree/IMPLEMENT.md << 'EOF'
+# Write brief to worktree before coda feature start
+cat > /path/to/worktree/IMPLEMENT.md << 'EOF'
 # IMPLEMENT.md
-You are a feature session. When you receive "execute", carry out this task:
+You are a feature session. Read this file at boot.
+When you receive "execute", carry out this task:
 <task description>
 Report back "PR ready: <url>" when done.
 EOF
 
-# 2. Prepend AGENTS.md
-cat > worktree/AGENTS.md.prepend << 'EOF'
+# Prepend AGENTS.md with feature-session header
+cat - /path/to/worktree/AGENTS.md > /tmp/agents_tmp << 'EOF'
 # FEATURE SESSION
-Read IMPLEMENT.md and execute when triggered.
+Read IMPLEMENT.md at startup. Execute when triggered.
 ---
 EOF
-cat worktree/AGENTS.md.prepend worktree/AGENTS.md > /tmp/agents_tmp
-mv /tmp/agents_tmp worktree/AGENTS.md
+mv /tmp/agents_tmp /path/to/worktree/AGENTS.md
 
-# 3. Update .gitignore
-echo -e 'IMPLEMENT.md\nAGENTS.md\n*.feature-brief.md' >> worktree/.gitignore
+# Gitignore instance-level files
+printf 'IMPLEMENT.md\nAGENTS.md\n*.feature-brief.md\n' >> /path/to/worktree/.gitignore
 ```
 
 ### Phase 2: Boot
 
 ```bash
-coda feature start <name>
-# Session reads AGENTS.md at startup -- brief is already in place
+source ~/projects/coda/main/shell-functions.sh
+_coda_feature start <name>
+# Session boots with IMPLEMENT.md and AGENTS.md prepend already in place
 ```
 
-### Phase 3: Trigger (via HTTP API, not tmux)
+### Phase 3: Trigger (via opencode run --attach)
 
 ```bash
-# Wait for port file
-while [ ! -f worktree/port ]; do sleep 1; done
-PORT=$(cat worktree/port)
-curl -s http://localhost:$PORT/api/message \
-  -X POST -H 'Content-Type: application/json' \
-  -d '{"content": "execute"}'
+# Wait for port file to appear
+WORKTREE=/home/coda/projects/<project>/<name>
+while [ ! -f "$WORKTREE/port" ]; do sleep 1; done
+PORT=$(cat "$WORKTREE/port")
+
+# Send trigger and stream response
+opencode run --attach http://localhost:$PORT --format json "execute"
 ```
 
-### Phase 4: Monitor
+### Phase 4: Monitor for completion
 
 ```bash
-# Poll for completion signal via API or port-based log stream
-# Session reports "PR ready: <url>" when done
+# Parse ACP stream for completion signal in text events
+opencode run --attach http://localhost:$PORT --format json "execute" | \
+  python3 -c "
+import sys, json
+for line in sys.stdin:
+    try:
+        event = json.loads(line)
+        if event.get('type') == 'text':
+            text = event['part'].get('text', '')
+            print(text, end='', flush=True)
+            if 'PR ready:' in text:
+                sys.exit(0)
+    except:
+        pass
+"
 ```
+
+## The AGENTS.md Prepend Convention
+
+The feature-session header that goes at the top of AGENTS.md:
+
+```markdown
+# FEATURE SESSION
+
+You are a feature implementation agent, NOT the orchestrator.
+Read IMPLEMENT.md for your task brief.
+When you receive "execute", carry out the task.
+Report back "PR ready: <url>" when done.
+
+---
+```
+
+This must be gitignored -- it is instance-level context, not repo content.
 
 ## Future: coda orch spawn
 
-Once phases 1-4 are reliable and automated, wrap them as:
+Once phases 1-4 are reliable and scripted, wrap as:
 
 ```bash
-coda orch spawn <name> --brief IMPLEMENT.md [--wait]
+coda orch spawn <name> --brief IMPLEMENT.md [--wait] [--timeout 30m]
 ```
 
-The lessons from manual implementation inform what spawn needs:
-- Brief-before-boot (not brief-as-message)
-- HTTP API trigger (not tmux)
-- Structured completion signal ("PR ready: <url>")
-- Optional --wait flag for blocking vs. fire-and-forget
+Internally this runs phases 1-4. With `--wait` it blocks until "PR ready:"
+appears in the stream. Without it, fires and returns the session URL.
 
-## Open Questions
+## Answers to Prior Open Questions
 
-- Does opencode expose an HTTP message API on the port? Need to verify.
-- Should the completion signal be a specific string or a structured response?
-- How does the orchestrator know which port belongs to which session?
-  (Answer: port file in the worktree, named consistently)
+- **Does opencode expose an HTTP message API?** Yes -- `opencode run --attach`
+  uses the ACP protocol on the serve port. Full JSON event stream.
+- **Completion signal format?** Text event containing "PR ready: <url>"
+  is sufficient. Can add structured signals later.
+- **How does orchestrator know the port?** Port file at `<worktree>/port`,
+  written by opencode on startup. Consistent and reliable.
+- **tmux send-keys?** Retired. HTTP only going forward.
