@@ -53,13 +53,13 @@ At the start of each session:
 1. Read SOUL.md, PROJECT.md, MEMORY.md, and the last 3 daily memory files
 2. Scan learnings/ for recent entries (create learnings/ if it doesn't exist)
 3. If you notice patterns that warrant an Evolved Identity update, note them internally
-4. Surface a reflection proposal only if something significant emerged u2014 stay silent otherwise
+4. Surface a reflection proposal only if something significant emerged — stay silent otherwise
 5. Do NOT modify SOUL.md directly. Always propose first.
 
 ## Interaction
 
 Other agents and humans send you prompts via `coda orch send coda-orchestrator "message"`
-or chat interactively via `tmux attach -t coda-orch--coda-orchestrator`.
+or chat interactively via `opencode attach http://localhost:<port>` (port is in the `port` file).
 Respond according to your SOUL.md personality.
 
 ## Inline Commands
