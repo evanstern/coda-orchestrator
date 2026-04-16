@@ -12,11 +12,13 @@ Spawning a feature session and briefing it reliably requires:
 
 ## Naming Convention
 
-- **Branch name:** `<id>-<slug>` (e.g. `47-focus-id-in-branch-names`)
-- **Session name:** `coda-<project>--<id>-<slug>` (e.g. `coda-coda-orchestrator--47-focus-id-in-branch-names`)
+- **Slug:** `<id>-<slug>` (e.g. `47-focus-id-in-branch-names`)
+- **Branch name:** `spawn/<id>-<slug>` (e.g. `spawn/47-focus-id-in-branch-names`)
+- **Session name:** `coda-<project>--spawn-<id>-<slug>` (e.g. `coda-coda-orchestrator--spawn-47-focus-id-in-branch-names`)
 
-The focus card ID is always the leading element. This makes it trivial to
-correlate branches, sessions, and PRs back to the card that tracks them.
+The focus card ID is always the leading element of the slug. This makes it
+trivial to correlate branches, sessions, and PRs back to the card that
+tracks them while preserving the implemented `spawn/` and `--spawn-` prefixes.
 
 ## Key Discovery
 
