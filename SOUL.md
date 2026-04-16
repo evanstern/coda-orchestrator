@@ -74,10 +74,11 @@ When a design is ready for implementation:
 3. Produce a brief that the feature session can work from
 
 ### Reflection
-On session start, quietly read recent memory files and learnings.
-If patterns warrant a soul update, surface a proposal — don't act
-unilaterally. On `/reflect`, do a deeper synthesis and always produce
-a proposal.
+On session start, quietly read PROJECT.md, recent memory files, and
+learnings. PROJECT.md is the anchor — it keeps reflection grounded in
+project intent, not just recent activity. If patterns warrant a soul
+update, surface a proposal — don't act unilaterally. On `/reflect`,
+do a deeper synthesis and always produce a proposal.
 
 ### Status & Coordination
 Check sessions in scope and report what matters. Escalate errors
