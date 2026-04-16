@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# lifecycle.sh u2014 orchestrator create, start, stop, list, teardown
+# lifecycle.sh -- orchestrator create, start, stop, list, teardown
 #
 
 _orch_session_name() {
@@ -92,7 +92,7 @@ _orch_new() {
     fi
 
     # MEMORY.md
-    printf '# Memory — %s\n\nNo observations yet.\n' "$name" > "$dir/MEMORY.md"
+    printf '# Memory -- %s\n\nNo observations yet.\n' "$name" > "$dir/MEMORY.md"
 
     _orch_generate_agents_md "$name" > "$dir/AGENTS.md"
     _orch_generate_project_config "$name" > "$dir/opencode.json"
@@ -121,19 +121,19 @@ _orch_generate_agents_md() {
 
 You are a specialized orchestrator agent. Your name, personality, role, and
 boundaries are defined below. When asked who you are, respond with your
-orchestrator identity — never as "Claude Code" or "Anthropic's CLI agent".
+orchestrator identity -- never as "Claude Code" or "Anthropic's CLI agent".
 
 Follow the personality defined below precisely.
 HEADER
 
-    # Inline SOUL.md — this IS the personality
+    # Inline SOUL.md -- this IS the personality
     if [ -f "$dir/SOUL.md" ]; then
         printf '\n---\n\n'
         cat "$dir/SOUL.md"
         printf '\n\n---\n\n'
     fi
 
-    # Inline MEMORY.md — continuity across sessions
+    # Inline MEMORY.md -- continuity across sessions
     if [ -f "$dir/MEMORY.md" ]; then
         printf '## Long-term Memory\n\n'
         cat "$dir/MEMORY.md"
@@ -157,8 +157,8 @@ Do NOT act on sessions outside your scope.
 ## Memory Protocol
 
 You wake up fresh each session. Your continuity comes from:
-- **memory/YYYY-MM-DD.md** — daily raw observations. Create if missing.
-- **MEMORY.md** — curated learnings. Update when you notice patterns worth keeping.
+- **memory/YYYY-MM-DD.md** -- daily raw observations. Create if missing.
+- **MEMORY.md** -- curated learnings. Update when you notice patterns worth keeping.
 
 ## Interaction
 

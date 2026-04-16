@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# soul.sh u2014 soul generation and editing
+# soul.sh -- soul generation and editing
 #
 
 _orch_generate_soul() {
@@ -19,12 +19,12 @@ The user described the personality as:
 
 Rules:
 - Output ONLY the raw markdown. No preamble, no explanation, no code fences.
-- The very first line of your output must be: # SOUL.md — $name
+- The very first line of your output must be: # SOUL.md -- $name
 - Do NOT start with "Here is" or any other introduction.
 
 Structure:
 
-# SOUL.md — $name
+# SOUL.md -- $name
 
 ## Identity
 Name, what this orchestrator does, its scope.
@@ -58,7 +58,7 @@ PROMPT
         echo "$result"
     else
         cat <<EOF
-# SOUL.md — $name
+# SOUL.md -- $name
 
 ## Identity
 Name: $name

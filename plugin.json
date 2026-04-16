@@ -1,7 +1,7 @@
 {
   "name": "orchestrator",
   "version": "0.2.0",
-  "description": "Multi-instance orchestrator pattern for coda sessions — soul, memory, scope",
+  "description": "Multi-instance orchestrator pattern for coda sessions -- soul, memory, scope",
   "coda": ">=0.1.0",
 
   "dependencies": {
