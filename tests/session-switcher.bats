@@ -55,6 +55,7 @@ teardown() {
     tmux new-session -d -s "coda-test-other--main" "sleep 300"
 
     run _orch_sessions testbot
+    [ "$status" -eq 0 ]
     [[ "$output" != *"coda-test-other--main"* ]]
 
     tmux kill-session -t "coda-test-other--main" 2>/dev/null || true
@@ -145,6 +146,7 @@ teardown() {
 
 @test "dispatch: help includes sessions and switch" {
     run _coda_orch help
+    [ "$status" -eq 0 ]
     [[ "$output" == *"sessions"* ]]
     [[ "$output" == *"switch"* ]]
 }
