@@ -1,6 +1,6 @@
 # Design: Evolving Personality System
 
-## Status: Seeded
+## Status: Implemented
 ## Card: #32
 
 ## The Two-Layer Model
@@ -20,6 +20,8 @@ Orchestrator personality is two layers:
 coda-orchestrator is the first instance. Its personality is the
 reference implementation -- the archetype was distilled from it.
 Every future instance starts from this seed.
+
+The archetype template lives in `defaults/SOUL.md.tmpl`.
 
 ## Evolution Mechanism
 
