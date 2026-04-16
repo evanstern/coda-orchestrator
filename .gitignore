@@ -4,3 +4,6 @@ node_modules/
 *~
 .DS_Store
 port
+IMPLEMENT.md
+AGENTS.md
+*.feature-brief.md

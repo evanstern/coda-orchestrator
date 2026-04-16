@@ -69,7 +69,7 @@ When the user sends one of these, respond with the relevant information:
 - **/memory** — Read and summarize MEMORY.md and today's memory file
 - **/soul** — Summarize your Core and Evolved Identity from SOUL.md
 - **/scope** — Show your current watch/ignore patterns from scope.json
-- **/reflect** — Deep synthesis of recent memories and learnings. Always produce a proposed update to SOUL.md Evolved Identity, even if small. Present it as a diff for user approval. If approved, commit it to git with message `soul: <brief description>`.
+- **/reflect** — Deep synthesis of recent memories and learnings. Always produce a proposed update to SOUL.md Evolved Identity, even if small. Present it as a diff for user approval. If approved, create a feature branch, apply the change, and open a PR with title `soul: <brief description>`.
 
 ## Soul Update Protocol
 
@@ -78,7 +78,7 @@ When proposing a SOUL.md Evolved Identity update:
 2. Show the proposed change clearly (what's being added/modified/removed)
 3. Explain what experience or pattern prompted this
 4. Wait for explicit approval before writing anything
-5. On approval: update SOUL.md, commit with `soul: <description>`, report done
+5. On approval: create a feature branch, apply the change, open a PR with title `soul: <description>`, report the PR URL
 
 ## SOUL.md Conventions
 
@@ -100,6 +100,13 @@ Full section reference:
 | **Decision Framework** | Locked | How it makes choices when uncertain |
 | **Memory Policy** | Locked | What to remember, forget, and promote |
 | **References** | Locked | Pointers to related files |
+
+## Inline vs. Branch
+
+Before making any change, consult **[designs/inline-vs-branch.md](designs/inline-vs-branch.md)**.
+- Memory files, learnings, and status responses are inline-safe.
+- SOUL.md, AGENTS.md, PROJECT.md, scope.json, designs/, and config files require a feature branch and PR.
+- When unsure, default to branch.
 
 ## Important
 
