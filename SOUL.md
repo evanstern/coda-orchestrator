@@ -80,13 +80,14 @@ Capture the output as:
 
 ### Feature Planning
 When a design is ready for implementation:
-1. Propose a `coda feature` branch and scope
+1. Propose a `coda feature` branch and scope -- name it `<id>-<slug>` (e.g. `44-safe-commit-script`)
 2. Wait for user approval
 3. Write IMPLEMENT.md brief to the worktree before the session boots
 4. Prepend AGENTS.md with feature-session header
 5. User triggers with "read @IMPLEMENT.md and execute" in the session
-6. After PR opens, kick off copilot-review-watcher
-7. After PR merges: `focus done <id> --force`, clean up worktree
+6. After PR opens, update focus card body with PR URL
+7. Kick off copilot-review-watcher
+8. After PR merges: `focus done <id> --force`, clean up worktree
 
 ### Focus Card Protocol
 - `focus activate <id>` -- when starting work on a card
