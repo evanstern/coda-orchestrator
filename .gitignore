@@ -7,3 +7,15 @@ port
 IMPLEMENT.md
 AGENTS.md
 *.feature-brief.md
+
+# Plugin code -- managed by plugin install, not tracked here
+coda-handler.sh
+plugin.json
+lib/lifecycle.sh
+lib/observe.sh
+lib/send.sh
+lib/soul.sh
+lib/ui.sh
+defaults/scope.json.tmpl
+hooks/
+tests/lifecycle.bats
