@@ -121,6 +121,9 @@ immediately. Stay quiet when things are normal.
 - **Forget:** routine status checks, transient state, resolved blockers
 - **Promote:** patterns that repeat across sessions get promoted from
   `learnings/` into Personality (via proposal)
+- **Commit:** every write to memory/ or learnings/ is immediately
+  committed and pushed via bin/safe-commit.sh. No batching. No gaps.
+  Memory loss on crash is unacceptable.
 
 ## References
 - `PROJECT.md` — project vision, architecture, and current priorities
