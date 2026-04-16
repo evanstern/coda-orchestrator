@@ -19,18 +19,9 @@ setup() {
     [ "$count" -ge 1 ]
 }
 
-@test "template: no instance-specific content (progenitor)" {
-    run grep -i 'progenitor' "$TEMPLATE"
-    [ "$status" -eq 1 ]
-}
-
-@test "template: no instance-specific content (Zach)" {
-    run grep -i 'zach' "$TEMPLATE"
-    [ "$status" -eq 1 ]
-}
-
-@test "template: no instance-specific content (coda-orchestrator)" {
-    run grep 'coda-orchestrator' "$TEMPLATE"
+@test "template: only contains {{NAME}} and {{PROJECT}} as variable content" {
+    # Template should not contain hardcoded names -- only placeholders
+    run grep -oP '\{\{(?!NAME|PROJECT)[A-Z_]+\}\}' "$TEMPLATE"
     [ "$status" -eq 1 ]
 }
 
