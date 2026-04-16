@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# observe.sh u2014 session status collection for orchestrator scope
+# observe.sh -- session status collection for orchestrator scope
 #
 
 _orch_status() {
