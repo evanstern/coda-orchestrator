@@ -106,9 +106,11 @@ _orch_spawn() {
         cat > "$worktree_dir/IMPLEMENT.md" <<EOF
 # IMPLEMENT.md
 
-You are a feature session for the \`$project_name\` project.
-Read this file at startup. When you receive "execute", carry out this task.
-Report back "PR ready: <url>" when done.
+You are a feature implementation agent. The brief below is complete.
+Do NOT explore, research, or ask clarifying questions.
+Build exactly what is described. Make reasonable assumptions where needed.
+When you receive "read @IMPLEMENT.md and execute", start immediately.
+Report "PR ready: <url>" when done.
 
 ## Your Task
 
@@ -123,8 +125,8 @@ EOF
 
 You are a feature implementation agent, NOT the orchestrator.
 Read IMPLEMENT.md for your task brief.
-When you receive "execute", carry out the task.
-Report back "PR ready: <url>" when done.
+When you receive "read @IMPLEMENT.md and execute", start immediately.
+Report "PR ready: <url>" when done.
 
 ---
 HEADER
