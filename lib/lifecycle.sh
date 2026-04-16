@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# lifecycle.sh u2014 orchestrator create, start, stop, list, teardown
+# lifecycle.sh -- orchestrator create, start, stop, list, teardown
 #
 
 _orch_session_name() {

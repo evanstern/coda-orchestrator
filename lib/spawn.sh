@@ -60,17 +60,12 @@ _orch_spawn() {
     local watch_pattern
     watch_pattern=$(jq -r '.watch[0] // empty' "$dir/scope.json" 2>/dev/null)
     local project_name
-    # Extract project name: coda-<project>--* -> <project>, or coda-* -> use orch name
+    # Extract project name: coda-<project>--* -> <project>
     if [[ "$watch_pattern" =~ ^coda-(.+)--\*$ ]]; then
         project_name="${BASH_REMATCH[1]}"
-    elif [[ "$watch_pattern" =~ ^coda-(.+)$ ]]; then
-        project_name="${BASH_REMATCH[1]}"
-        project_name="${project_name%\*}"
-        project_name="${project_name%-}"
-    fi
-
-    if [ -z "$project_name" ]; then
+    else
         echo "Cannot determine project from scope: $watch_pattern"
+        echo "  Scope watch pattern must be 'coda-<project>--*'"
         return 1
     fi
 
@@ -197,7 +192,7 @@ HEADER
     opencode run --attach "http://localhost:$port" --format json "execute" \
         > "$log_file" 2>&1 &
     local run_pid=$!
-    disown $run_pid
+    disown $run_pid 2>/dev/null || true
 
     echo "Spawned: $session_name (port $port)"
     echo "  Worktree: $worktree_dir"
@@ -226,9 +221,20 @@ _orch_spawn_status() {
     echo "Spawned sessions for: $orch_name"
     echo ""
 
-    local sessions
-    sessions=$(tmux list-sessions -F '#{session_name}|#{session_created}' 2>/dev/null \
+    local candidate_sessions
+    candidate_sessions=$(tmux list-sessions -F '#{session_name}|#{session_created}' 2>/dev/null \
         | grep '.*--spawn-' || true)
+
+    local sessions=""
+    while IFS='|' read -r sess_name created; do
+        [ -z "$sess_name" ] && continue
+        local slug
+        slug=$(echo "$sess_name" | sed 's/.*--spawn-//')
+        if [ -d "$log_dir" ] && [ -f "$log_dir/spawn-${slug}.log" ]; then
+            sessions="${sessions}${sess_name}|${created}
+"
+        fi
+    done <<< "$candidate_sessions"
 
     if [ -z "$sessions" ]; then
         echo "  (no active spawned sessions)"
@@ -236,7 +242,7 @@ _orch_spawn_status() {
     fi
 
     while IFS='|' read -r sess_name created; do
-        # Extract slug from session name: ..--spawn-<slug>
+        [ -z "$sess_name" ] && continue
         local slug
         slug=$(echo "$sess_name" | sed 's/.*--spawn-//')
 
@@ -244,11 +250,12 @@ _orch_spawn_status() {
         local pane_id
         pane_id=$(tmux list-panes -t "$sess_name" -F '#{pane_id}' 2>/dev/null | head -1)
 
-        # Try to find port from worktree port file
-        local port_file
-        port_file=$(tmux show-environment -t "$sess_name" CODA_DIR 2>/dev/null | sed 's/CODA_DIR=//')
-        if [ -n "$port_file" ] && [ -f "$port_file/port" ]; then
-            port=$(cat "$port_file/port")
+        local worktree_dir=""
+        if [ -n "$pane_id" ]; then
+            worktree_dir=$(tmux display-message -p -t "$pane_id" '#{pane_current_path}' 2>/dev/null)
+        fi
+        if [ -n "$worktree_dir" ] && [ -f "$worktree_dir/port" ]; then
+            port=$(cat "$worktree_dir/port")
         fi
 
         local age=""
@@ -317,11 +324,16 @@ _orch_spawn_wait() {
     echo "Waiting for completion of spawn/$slug (timeout: ${timeout}s)..."
 
     local result
+    set -o pipefail
     result=$(timeout "$timeout" tail -f "$log_file" 2>/dev/null | _orch_parse_acp_completion)
     local status=$?
+    set +o pipefail
 
     if [ $status -eq 124 ]; then
         echo "Timed out after ${timeout}s"
+        return 1
+    elif [ $status -ne 0 ]; then
+        echo "Spawn log ended without a completion marker for: $slug"
         return 1
     fi
 
@@ -336,12 +348,14 @@ for line in sys.stdin:
     if not line: continue
     try:
         event = json.loads(line)
-        if event.get('type') == 'text':
-            text = event.get('part', {}).get('text', '')
-            sys.stdout.write(text)
-            sys.stdout.flush()
-            if 'PR ready:' in text or 'done:' in text:
-                sys.exit(0)
-    except: pass
+    except json.JSONDecodeError:
+        continue
+    if event.get('type') == 'text':
+        text = event.get('part', {}).get('text', '')
+        sys.stdout.write(text)
+        sys.stdout.flush()
+        if 'PR ready:' in text or 'done:' in text:
+            sys.exit(0)
+sys.exit(1)
 "
 }

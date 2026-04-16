@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# send.sh u2014 prompt dispatch via opencode serve HTTP API
+# send.sh -- prompt dispatch via opencode serve HTTP API
 #
 
 _orch_send() {

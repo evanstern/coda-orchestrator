@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# coda-handler.sh u2014 coda orchestrator plugin command dispatcher
+# coda-handler.sh -- coda orchestrator plugin command dispatcher
 #
 # Sourced by coda's plugin system. Provides `coda orch <subcommand>`.
 #
@@ -36,7 +36,7 @@ _coda_orch() {
         spawns)  _orch_spawn_status "$@" ;;
         help|"")
             cat <<'EOF'
-coda orch u2014 orchestrator management
+coda orch -- orchestrator management
 
 USAGE
   coda orch new <name> [--soul "..."] [--scope "pattern"]   Create orchestrator

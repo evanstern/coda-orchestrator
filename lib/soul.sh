@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# soul.sh u2014 soul generation and editing
+# soul.sh -- soul generation and editing
 #
 
 _orch_generate_soul() {

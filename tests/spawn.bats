@@ -122,6 +122,8 @@ teardown() {
 
 @test "spawns: lists active spawn sessions" {
     _orch_new testbot
+    mkdir -p "$CODA_ORCH_DIR/testbot/logs"
+    echo '{"type":"text","part":{"text":"working..."}}' > "$CODA_ORCH_DIR/testbot/logs/spawn-task1.log"
     tmux new-session -d -s "coda-test--spawn-task1" "sleep 300"
 
     run _orch_spawn_status testbot
