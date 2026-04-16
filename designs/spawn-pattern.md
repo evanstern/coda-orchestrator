@@ -24,6 +24,29 @@ The ACP (Agent Client Protocol) stream emits JSON events:
 
 This is the mechanism for #38. tmux send-keys is retired.
 
+## IMPLEMENT.md Brief Template
+
+Every IMPLEMENT.md written for a spawned session MUST start with:
+
+```markdown
+# IMPLEMENT.md
+
+You are a feature implementation agent. The brief below is complete.
+Do NOT explore, research, or ask clarifying questions.
+Build exactly what is described. If something is unclear, make a
+reasonable assumption and note it in your PR description.
+
+When you receive "execute", start immediately.
+Report "PR ready: <url>" when done.
+
+---
+```
+
+The anti-exploration instruction is non-negotiable. Without it, sessions
+tend to spend 10+ tool calls on research before writing a single line.
+At scale with automated spawning, that burns tokens silently with no
+human to intervene.
+
 ## The Pattern
 
 ### Phase 1: Prepare (before session boots)
