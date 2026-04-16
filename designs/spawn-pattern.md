@@ -10,6 +10,16 @@ Spawning a feature session and briefing it reliably requires:
 2. A reliable trigger mechanism (not tmux send-keys)
 3. Atomic setup before the session starts
 
+## Naming Convention
+
+- **Slug:** `<id>-<slug>` (e.g. `47-focus-id-in-branch-names`)
+- **Branch name:** `spawn/<id>-<slug>` (e.g. `spawn/47-focus-id-in-branch-names`)
+- **Session name:** `coda-<project>--spawn-<id>-<slug>` (e.g. `coda-coda-orchestrator--spawn-47-focus-id-in-branch-names`)
+
+The focus card ID is always the leading element of the slug. This makes it
+trivial to correlate branches, sessions, and PRs back to the card that
+tracks them while preserving the implemented `spawn/` and `--spawn-` prefixes.
+
 ## Key Discovery
 
 `opencode run --attach http://localhost:<port> --format json "message"` works.
@@ -41,6 +51,24 @@ Report "PR ready: <url>" when done.
 
 ---
 ```
+
+## PR Body Template
+
+Every PR opened by a feature session should include:
+
+```markdown
+### Focus
+Card: #<id>
+Title: <card title>
+
+### Summary
+<what was done>
+```
+
+This links the PR back to its focus card and gives reviewers immediate
+context without reading the full diff.
+
+## Anti-Exploration Rule
 
 The anti-exploration instruction is non-negotiable. Without it, sessions
 tend to spend 10+ tool calls on research before writing a single line.
@@ -77,7 +105,7 @@ printf 'IMPLEMENT.md\nAGENTS.md\n*.feature-brief.md\n' >> /path/to/worktree/.git
 
 ```bash
 source ~/projects/coda/main/shell-functions.sh
-_coda_feature start <name>
+_coda_feature start <id>-<slug>
 # Session boots with IMPLEMENT.md and AGENTS.md prepend already in place
 ```
 
@@ -85,7 +113,7 @@ _coda_feature start <name>
 
 ```bash
 # Wait for port file to appear
-WORKTREE=/home/coda/projects/<project>/<name>
+WORKTREE=/home/coda/projects/<project>/<id>-<slug>
 while [ ! -f "$WORKTREE/port" ]; do sleep 1; done
 PORT=$(cat "$WORKTREE/port")
 
@@ -138,7 +166,7 @@ This must be gitignored -- it is instance-level context, not repo content.
 Once phases 1-4 are reliable and scripted, wrap as:
 
 ```bash
-coda orch spawn <name> --brief IMPLEMENT.md [--wait] [--timeout 30m]
+coda orch spawn <id>-<slug> --brief IMPLEMENT.md [--wait] [--timeout 30m]
 ```
 
 Internally this runs phases 1-4. With `--wait` it blocks until "PR ready:"
