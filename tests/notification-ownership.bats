@@ -3,6 +3,8 @@
 # Tests for ownership extraction logic used in notification hooks.
 # Session naming convention: coda-<project>--<branch>
 # The orchestrator name is the <project> portion.
+# Note: the actual hook scripts live in ~/.config/coda/orchestrators/ (gitignored).
+# These tests verify the extraction logic and hook early-exit behavior.
 
 extract_orch_name() {
     echo "$1" | sed 's/^coda-//; s/--.*$//'
@@ -35,53 +37,36 @@ extract_orch_name() {
     [ "$result" = "openclaw" ]
 }
 
-# --- hook only notifies owner ---
+# --- ownership filtering logic ---
 
-setup() {
-    export ORCH_BASE_DIR="$BATS_TEST_TMPDIR/orchestrators"
-    export CODA_ORCH_DIR="$ORCH_BASE_DIR"
-    export SESSION_PREFIX="coda-test-"
-
-    # Create two fake orchestrators with ports
-    mkdir -p "$ORCH_BASE_DIR/coda-orchestrator"
-    echo "4280" > "$ORCH_BASE_DIR/coda-orchestrator/port"
-
-    mkdir -p "$ORCH_BASE_DIR/openclaw"
-    echo "4281" > "$ORCH_BASE_DIR/openclaw/port"
-}
-
-@test "hook: pre-feature-teardown only targets owning orchestrator" {
-    HOOK="$BATS_TEST_DIRNAME/../hooks/pre-feature-teardown/50-orch-notify"
-    [ -f "$HOOK" ] || HOOK="$HOME/.config/coda/orchestrators/coda-orchestrator/hooks/pre-feature-teardown/50-orch-notify"
-
-    # Source extraction logic from the hook (simulate)
+@test "ownership: coda-orchestrator session does not match openclaw" {
     SESSION_NAME="coda-coda-orchestrator--test-branch"
-    ORCH_NAME=$(echo "$SESSION_NAME" | sed 's/^coda-//; s/--.*$//')
+    ORCH_NAME=$(extract_orch_name "$SESSION_NAME")
     [ "$ORCH_NAME" = "coda-orchestrator" ]
-
-    # Verify it would NOT match openclaw
     [ "$ORCH_NAME" != "openclaw" ]
 }
 
-@test "hook: post-session-create only targets owning orchestrator" {
-    HOOK="$BATS_TEST_DIRNAME/../hooks/post-session-create/50-orch-notify"
-    [ -f "$HOOK" ] || HOOK="$HOME/.config/coda/orchestrators/coda-orchestrator/hooks/post-session-create/50-orch-notify"
-
+@test "ownership: openclaw session does not match coda-orchestrator" {
     SESSION_NAME="coda-openclaw--new-feature"
-    ORCH_NAME=$(echo "$SESSION_NAME" | sed 's/^coda-//; s/--.*$//')
+    ORCH_NAME=$(extract_orch_name "$SESSION_NAME")
     [ "$ORCH_NAME" = "openclaw" ]
-
-    # Verify it would NOT match coda-orchestrator
     [ "$ORCH_NAME" != "coda-orchestrator" ]
 }
 
 @test "hook: empty session name causes early exit" {
-    SESSION_NAME=""
-    [ -z "$SESSION_NAME" ]
+    HOOK="$HOME/.config/coda/orchestrators/coda-orchestrator/hooks/pre-feature-teardown/50-orch-notify"
+    if [ -f "$HOOK" ]; then
+        run env CODA_SESSION_NAME="" CODA_ORCH_DIR="$BATS_TEST_TMPDIR/orchestrators" bash "$HOOK"
+        [ "$status" -eq 0 ]
+        [ -z "$output" ]
+    else
+        # Hook not on disk (CI), verify extraction returns empty
+        result=$(extract_orch_name "")
+        [ -z "$result" ]
+    fi
 }
 
-@test "hook: session without double-dash extracts full name after prefix" {
-    # Edge case: no branch separator
+@test "extract: session without double-dash extracts full name after prefix" {
     result=$(extract_orch_name "coda-myproject")
     [ "$result" = "myproject" ]
 }
