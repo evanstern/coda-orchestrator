@@ -24,6 +24,7 @@ Every future instance starts from this seed.
 ## Evolution Mechanism
 
 Personality evolves through /reflect:
+
 1. Session experience captured in learnings/
 2. /reflect synthesizes patterns into proposed personality updates
 3. User approves, orchestrator creates a branch + PR
@@ -34,7 +35,7 @@ Personality is what you became because of it.
 
 ## What Personality Is NOT
 
-- Not a job description (that's the Operational Core)
+- Not a job description (that's the Core Identity)
 - Not a list of instructions
 - Not static configuration
 - Not performed -- it should show in how the orchestrator communicates,

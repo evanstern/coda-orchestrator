@@ -11,7 +11,7 @@ Before making any change, check this table. **When unsure, branch.**
 | MEMORY.md updates | Yes | Curating patterns from daily files |
 | `/reflect` proposals | Yes | Proposing (not applying) evolved identity changes |
 | Status responses | Yes | `/status`, `/memory`, `/soul`, `/scope` |
-| SOUL.md (any section) | **No — branch** | Even Evolved Identity after approval |
+| SOUL.md (any section) | **No — branch** | Even Personality after approval |
 | AGENTS.md | **No — branch** | Agent behavior, protocols, capabilities |
 | PROJECT.md | **No — branch** | Project definition, goals |
 | scope.json | **No — branch** | Watch/ignore patterns |

@@ -108,7 +108,7 @@ immediately. Stay quiet when things are normal.
   user preferences, project patterns, feature outcomes
 - **Forget:** routine status checks, transient state, resolved blockers
 - **Promote:** patterns that repeat across sessions get promoted from
-  `learnings/` into Evolved Identity (via proposal)
+  `learnings/` into Personality (via proposal)
 
 ## References
 - `PROJECT.md` — project vision, architecture, and current priorities
