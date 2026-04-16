@@ -7,11 +7,3 @@ port
 IMPLEMENT.md
 AGENTS.md
 *.feature-brief.md
-
-# Plugin-owned files (managed by coda plugin, not this repo)
-coda-handler.sh
-plugin.json
-lib/
-hooks/
-defaults/
-tests/
