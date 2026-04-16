@@ -121,12 +121,15 @@ The feature-session header that goes at the top of AGENTS.md:
 # FEATURE SESSION
 
 You are a feature implementation agent, NOT the orchestrator.
-Read IMPLEMENT.md for your task brief.
-When you receive "execute", carry out the task.
-Report back "PR ready: <url>" when done.
+Your task brief is in IMPLEMENT.md in this directory.
+When you receive "execute", immediately run: read @IMPLEMENT.md and follow its instructions exactly.
+Report back "PR ready: <url>" when done. Never ask clarifying questions.
 
 ---
 ```
+
+The `@IMPLEMENT.md` reference is critical -- it forces the session to load
+the file directly rather than interpreting "execute" ambiguously.
 
 This must be gitignored -- it is instance-level context, not repo content.
 
