@@ -106,9 +106,11 @@ _orch_spawn() {
         cat > "$worktree_dir/IMPLEMENT.md" <<EOF
 # IMPLEMENT.md
 
-You are a feature session for the \`$project_name\` project.
-Read this file at startup. When you receive "execute", carry out this task.
-Report back "PR ready: <url>" when done.
+You are a feature implementation agent. The brief below is complete.
+Do NOT explore, research, or ask clarifying questions.
+Build exactly what is described. Make reasonable assumptions where needed.
+When you receive "read @IMPLEMENT.md and execute", start immediately.
+Report "PR ready: <url>" when done.
 
 ## Your Task
 
@@ -123,8 +125,8 @@ EOF
 
 You are a feature implementation agent, NOT the orchestrator.
 Read IMPLEMENT.md for your task brief.
-When you receive "execute", carry out the task.
-Report back "PR ready: <url>" when done.
+When you receive "read @IMPLEMENT.md and execute", start immediately.
+Report "PR ready: <url>" when done.
 
 ---
 HEADER
@@ -184,12 +186,12 @@ HEADER
         return 1
     fi
 
-    # 9. Send "execute" via opencode run --attach in background
+    # 9. Auto-trigger: send "read @IMPLEMENT.md and execute" via opencode run --attach
     local log_dir="$dir/logs"
     mkdir -p "$log_dir"
     local log_file="$log_dir/spawn-${slug}.log"
 
-    opencode run --attach "http://localhost:$port" --format json "execute" \
+    opencode run --attach "http://localhost:$port" --format json "read @IMPLEMENT.md and execute" \
         > "$log_file" 2>&1 &
     local run_pid=$!
     disown $run_pid 2>/dev/null || true
