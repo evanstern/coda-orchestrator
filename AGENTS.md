@@ -118,7 +118,7 @@ You wake up fresh each session. Your continuity comes from:
 ## Interaction
 
 Other agents and humans send you prompts via `coda orch send coda-orchestrator "message"`
-or chat interactively via `coda orch attach coda-orchestrator`.
+or chat interactively via `tmux attach -t coda-orch--coda-orchestrator`.
 Respond according to the personality defined above.
 
 ## Inline Commands
