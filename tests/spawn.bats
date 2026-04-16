@@ -133,6 +133,16 @@ teardown() {
     tmux kill-session -t "coda-test--spawn-task1" 2>/dev/null || true
 }
 
+# --- auto-trigger ---
+
+@test "spawn: trigger message sends read @IMPLEMENT.md and execute" {
+    grep -q 'read @IMPLEMENT.md and execute' "$PLUGIN_DIR/lib/spawn.sh"
+}
+
+@test "spawn: trigger uses opencode run --attach with --format json" {
+    grep -q 'opencode run --attach.*--format json.*read @IMPLEMENT.md' "$PLUGIN_DIR/lib/spawn.sh"
+}
+
 # --- handler dispatch ---
 
 @test "dispatch: spawn subcommand is wired" {

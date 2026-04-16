@@ -184,12 +184,12 @@ HEADER
         return 1
     fi
 
-    # 9. Send "execute" via opencode run --attach in background
+    # 9. Auto-trigger: send "read @IMPLEMENT.md and execute" via opencode run --attach
     local log_dir="$dir/logs"
     mkdir -p "$log_dir"
     local log_file="$log_dir/spawn-${slug}.log"
 
-    opencode run --attach "http://localhost:$port" --format json "execute" \
+    opencode run --attach "http://localhost:$port" --format json "read @IMPLEMENT.md and execute" \
         > "$log_file" 2>&1 &
     local run_pid=$!
     disown $run_pid 2>/dev/null || true
