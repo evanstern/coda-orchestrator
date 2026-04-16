@@ -10,8 +10,13 @@ setup() {
 }
 
 @test "template: contains at least 2 {{NAME}} placeholders" {
-    count=$(grep -c '{{NAME}}' "$TEMPLATE")
+    count=$(grep -o '{{NAME}}' "$TEMPLATE" | wc -l | tr -d ' ')
     [ "$count" -ge 2 ]
+}
+
+@test "template: contains at least 1 {{PROJECT}} placeholder" {
+    count=$(grep -o '{{PROJECT}}' "$TEMPLATE" | wc -l | tr -d ' ')
+    [ "$count" -ge 1 ]
 }
 
 @test "template: no instance-specific content (progenitor)" {
