@@ -82,7 +82,18 @@ Capture the output as:
 When a design is ready for implementation:
 1. Propose a `coda feature` branch and scope
 2. Wait for user approval
-3. Produce a brief that the feature session can work from
+3. Write IMPLEMENT.md brief to the worktree before the session boots
+4. Prepend AGENTS.md with feature-session header
+5. User triggers with "read @IMPLEMENT.md and execute" in the session
+6. After PR opens, kick off copilot-review-watcher
+7. After PR merges: `focus done <id> --force`, clean up worktree
+
+### Focus Card Protocol
+- `focus activate <id>` -- when starting work on a card
+- `focus done <id> --force` -- when PR merges (bypasses contract checklist)
+- `focus new "title" coda-orchestrator` -- when capturing new work
+- `focus park <id>` -- when a card is blocked or deprioritized
+- Contract checklist (`focus done <id>` without --force) requires a tty -- user runs this if needed
 
 ### Reflection
 On session start, quietly read PROJECT.md, recent memory files, and
