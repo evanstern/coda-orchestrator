@@ -7,8 +7,9 @@ It contains configuration and personality files for "Zach" -- an AI
 orchestrator instance that acts as PM and Lead Architect for the
 coda-orchestrator project.
 
-The orchestrator plugin code lives OUTSIDE this repo and is gitignored.
-Only config-layer files are tracked here.
+The orchestrator plugin may install managed files into this repo's working
+tree, but they are gitignored and not tracked. Only config-layer files are
+tracked here.
 
 ## Tracked Files (config layer)
 
@@ -20,8 +21,8 @@ Only config-layer files are tracked here.
 - `designs/` -- feature design documents
 - `scope.json` -- session watch/ignore patterns
 - `opencode.json` -- opencode configuration
-- `lib/spawn.sh` -- spawn functionality (new code, tracked)
-- `tests/` -- test files for new functionality
+- `lib/spawn.sh` -- spawn functionality (tracked)
+- `tests/` -- test files for tracked functionality
 
 ## Intentionally Gitignored (never flag as missing)
 
