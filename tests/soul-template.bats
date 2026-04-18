@@ -14,14 +14,9 @@ setup() {
     [ "$count" -ge 2 ]
 }
 
-@test "template: contains at least 1 {{PROJECT}} placeholder" {
-    count=$(grep -o '{{PROJECT}}' "$TEMPLATE" | wc -l | tr -d ' ')
-    [ "$count" -ge 1 ]
-}
-
-@test "template: only contains {{NAME}} and {{PROJECT}} as variable content" {
+@test "template: only contains {{NAME}} as variable content" {
     # Template should not contain hardcoded names -- only placeholders
-    run grep -oP '\{\{(?!NAME|PROJECT)[A-Z_]+\}\}' "$TEMPLATE"
+    run grep -oP '\{\{(?!NAME)[A-Z_]+\}\}' "$TEMPLATE"
     [ "$status" -eq 1 ]
 }
 
@@ -33,8 +28,8 @@ setup() {
     grep -q '## Personality' "$TEMPLATE"
 }
 
-@test "template: has Workflows section" {
-    grep -q '## Workflows' "$TEMPLATE"
+@test "template: has How I Work section" {
+    grep -q '## How I Work' "$TEMPLATE"
 }
 
 @test "template: has Memory Policy section" {
