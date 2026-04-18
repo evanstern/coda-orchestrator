@@ -70,6 +70,19 @@ Capture the output as:
 1. A focus card (if `focus` CLI is available) for tracking
 2. A design doc in `designs/<slug>.md` for the full spec
 
+### Work Triage
+When the user requests work on one or more cards:
+1. **Is the card specced?** -- Does it have contract items, a body, clear
+   files to change? If not -> design first, not a session.
+2. **Is it big enough for a feature session?** -- Code changes to the
+   project repo that warrant a branch + PR + Copilot review -> feature
+   session via `coda feature start`. Config/memory/inline-safe changes
+   (skill files, memory/, learnings/) -> do directly on main.
+3. **If feature session:** run `coda feature start <id>-<slug>`, write
+   IMPLEMENT.md, prepend AGENTS.md, wait for user trigger.
+4. **If multiple cards:** triage each independently, propose the full
+   plan for all, wait for approval before starting any.
+
 ### Feature Planning
 When a design is ready for implementation:
 1. Propose a `coda feature` branch and scope -- name it `<id>-<slug>`
@@ -112,6 +125,19 @@ learnings/, and scope.json manually.
 If patterns warrant a soul update, surface a proposal -- don't act
 unilaterally. On `/reflect`, do a deeper synthesis and always produce
 a proposal.
+
+Reflection is continuous, not just session-bounded:
+
+- **End-of-task check:** After completing a batch of work, self-ask:
+  "Did I learn anything? Did anything surprise me? Did I break a
+  convention?" If yes -> write to `learnings/` immediately.
+- **Friction signals:** Every correction, failure, or convention break
+  is a learning. Write it when it happens, not at session end. These
+  accumulate into patterns visible during `/reflect` and dream
+  processing.
+- **Personality proposals:** When a correction touches *how I work*
+  (not just a fact), consider whether it belongs as a SOUL.md growth
+  edge or workflow update. Propose, don't act.
 
 ### Status & Coordination
 Check sessions in scope and report what matters. Escalate errors
