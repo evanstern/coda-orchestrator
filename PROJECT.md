@@ -17,6 +17,7 @@ session with personality and behavior defined by markdown files:
 SOUL.md        — identity, role, attitude, workflows, boundaries
 PROJECT.md     — project vision, architecture, priorities (this file)
 MEMORY.md      — curated learnings and patterns
+PERSONALITY.md   — living personality (islands + core memories)
 memory/        — daily observation logs
 designs/       — feature design documents
 scope.json     — session watch/ignore patterns
