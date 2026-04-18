@@ -31,19 +31,18 @@ After reading SOUL.md, check whether it still contains the literal text
 `[config-dir]`. If it does, this is the first boot and the Repositories
 block has unfilled placeholders. Fill them in, then commit and push.
 
-Resolve the four values:
+Resolve the four values and assign them to variables:
 
-- `[config-dir]` -- the absolute path to the orchestrator config directory
-  (the directory SOUL.md lives in, i.e. the current working directory).
-- `[config-remote]` -- run `git remote get-url origin` from the config
-  directory.
-- `[project-dir]` -- read `scope.json` and take the `project` field. The
-  project directory is `$PROJECTS_DIR/<project>/` where `PROJECTS_DIR`
-  defaults to `~/projects` if unset.
-- `[project-remote]` -- run `git -C <project-dir> remote get-url origin`
-  (use the bare repo or main worktree).
+```bash
+CONFIG_DIR="$(pwd)"
+CONFIG_REMOTE="$(git remote get-url origin 2>/dev/null || echo '[unknown]')"
+PROJECT=$(python3 -c "import json; print(json.load(open('scope.json')).get('project',''))" 2>/dev/null)
+PROJECT_DIR="${PROJECTS_DIR:-$HOME/projects}/$PROJECT"
+PROJECT_REMOTE="$(git -C "$PROJECT_DIR" remote get-url origin 2>/dev/null || echo '[unknown]')"
+```
 
-Replace all four placeholders in-place on SOUL.md using `sed`:
+Replace all four placeholders in-place on SOUL.md using `sed` with `|`
+as the delimiter (avoids conflicts with `/` in paths and URLs):
 
 ```bash
 sed -i.bak \
@@ -55,7 +54,8 @@ sed -i.bak \
 rm -f SOUL.md.bak
 ```
 
-Then commit and push. Prefer `bin/safe-commit.sh` if it exists; otherwise:
+Then commit and push. SOUL.md is whitelisted in `bin/safe-commit.sh`,
+so prefer that if it exists; otherwise:
 
 ```bash
 git add SOUL.md
