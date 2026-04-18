@@ -6,6 +6,7 @@ setup() {
     export CODA_ORCH_PORT_RANGE=10
     export SESSION_PREFIX="coda-test-"
     export PROJECTS_DIR="$BATS_TEST_TMPDIR/projects"
+    export HOME="$BATS_TEST_TMPDIR/home"
 
     PLUGIN_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
     export _ORCH_PLUGIN_DIR="$PLUGIN_DIR"
@@ -84,11 +85,9 @@ teardown() {
 
 @test "spawn: resolves project from scope watch pattern" {
     _orch_new testbot --scope 'coda-testproject--*'
-
-    # This will fail at the opencode serve step (no opencode in test),
-    # but we can verify it got past project resolution
+    # Clear project field to test watch-pattern fallback
+    printf '{"project":"","watch":["coda-testproject--*"],"ignore":["coda-orch--*","coda-mcp-server","coda-watcher"]}\n' > "$CODA_ORCH_DIR/testbot/scope.json"
     run _orch_spawn testbot myslug "do the thing"
-    # Should not fail with "Cannot determine project"
     [[ "$output" != *"Cannot determine project"* ]]
 }
 
@@ -97,6 +96,45 @@ teardown() {
     run _orch_spawn testbot myslug "do the thing"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Project directory not found"* ]]
+}
+
+@test "spawn: resolves project from scope.project field" {
+    _orch_new testbot --scope 'coda-*'
+    printf '{"project":"testproject","watch":["coda-*"],"ignore":[]}\n' > "$CODA_ORCH_DIR/testbot/scope.json"
+    run _orch_spawn testbot myslug "do the thing"
+    [[ "$output" != *"Cannot determine project"* ]]
+    [[ "$output" != *"Project directory not found"* ]]
+}
+
+@test "spawn: falls back to watch pattern when project field empty" {
+    _orch_new testbot --scope 'coda-testproject--*'
+    printf '{"project":"","watch":["coda-testproject--*"],"ignore":[]}\n' > "$CODA_ORCH_DIR/testbot/scope.json"
+    run _orch_spawn testbot myslug "do the thing"
+    [[ "$output" != *"Cannot determine project"* ]]
+    [[ "$output" != *"Project directory not found"* ]]
+}
+
+@test "spawn: falls back to orch name when pattern is broad" {
+    mkdir -p "$PROJECTS_DIR/testbot"
+    git -C "$PROJECTS_DIR/testbot" init -q --bare
+    local tmp_clone="$BATS_TEST_TMPDIR/tmp-clone-fallback"
+    git clone -q "$PROJECTS_DIR/testbot" "$tmp_clone"
+    git -C "$tmp_clone" -c user.name='test' -c user.email='test@test' commit -q --allow-empty -m 'init'
+    git -C "$tmp_clone" push -q origin main 2>/dev/null || \
+        git -C "$tmp_clone" push -q origin master 2>/dev/null
+    rm -rf "$tmp_clone"
+    _orch_new testbot --scope 'coda-*'
+    printf '{"watch":["coda-*"],"ignore":[]}\n' > "$CODA_ORCH_DIR/testbot/scope.json"
+    run _orch_spawn testbot myslug "do the thing"
+    [[ "$output" != *"Cannot determine project"* ]]
+    [[ "$output" != *"Project directory not found"* ]]
+}
+
+@test "spawn: scope.project takes priority over watch pattern" {
+    _orch_new testbot --scope 'coda-nonexistent--*'
+    printf '{"project":"testproject","watch":["coda-nonexistent--*"],"ignore":[]}\n' > "$CODA_ORCH_DIR/testbot/scope.json"
+    run _orch_spawn testbot myslug "do the thing"
+    [[ "$output" != *"Project directory not found"* ]]
 }
 
 # --- spawns (status) ---

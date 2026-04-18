@@ -16,6 +16,6 @@ lib/observe.sh
 lib/send.sh
 lib/soul.sh
 lib/ui.sh
-defaults/scope.json.tmpl
+# defaults/scope.json.tmpl is now tracked (like SOUL.md.tmpl)
 hooks/
 tests/lifecycle.bats

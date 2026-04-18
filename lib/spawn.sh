@@ -56,17 +56,23 @@ _orch_spawn() {
     local project_dir
     project_dir="${PROJECTS_DIR:-$HOME/projects}"
 
-    # Determine project name from scope watch patterns
-    local watch_pattern
-    watch_pattern=$(jq -r '.watch[0] // empty' "$dir/scope.json" 2>/dev/null)
+    # Three-level project name resolution:
+    # 1. scope.project (explicit)
+    # 2. Watch pattern: coda-<project>--* (backward compat)
+    # 3. Orchestrator name (last resort)
     local project_name
-    # Extract project name: coda-<project>--* -> <project>
-    if [[ "$watch_pattern" =~ ^coda-(.+)--\*$ ]]; then
-        project_name="${BASH_REMATCH[1]}"
-    else
-        echo "Cannot determine project from scope: $watch_pattern"
-        echo "  Scope watch pattern must be 'coda-<project>--*'"
-        return 1
+    project_name=$(jq -r '.project // empty' "$dir/scope.json" 2>/dev/null)
+
+    if [ -z "$project_name" ]; then
+        local watch_pattern
+        watch_pattern=$(jq -r '.watch[0] // empty' "$dir/scope.json" 2>/dev/null)
+        if [[ "$watch_pattern" =~ ^coda-(.+)--\*$ ]]; then
+            project_name="${BASH_REMATCH[1]}"
+        fi
+    fi
+
+    if [ -z "$project_name" ]; then
+        project_name="$orch_name"
     fi
 
     local project_root="$project_dir/$project_name"
