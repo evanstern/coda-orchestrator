@@ -65,7 +65,12 @@ _coda_feature_start() {
     local positional=()
     while [ $# -gt 0 ]; do
         case "$1" in
-            --orch) orch_name="$2"; shift 2 ;;
+            --orch)
+                if [ -z "${2:-}" ] || [[ "$2" == --* ]]; then
+                    echo "--orch requires an orchestrator name"
+                    return 1
+                fi
+                orch_name="$2"; shift 2 ;;
             *)      positional+=("$1"); shift ;;
         esac
     done
@@ -120,7 +125,7 @@ _coda_feature_orch_hook() {
     local worktree_dir="$4"
     local project_root="$5"
 
-    local dir="$CODA_ORCH_DIR/$orch_name"
+    local dir="$ORCH_BASE_DIR/$orch_name"
     if [ ! -d "$dir" ]; then
         echo "Orchestrator not found: $orch_name"
         return 1
@@ -129,8 +134,7 @@ _coda_feature_orch_hook() {
     # 1. Write IMPLEMENT.md (if orchestrator has one staged)
     local staged_brief="$dir/staged-brief.md"
     if [ -f "$staged_brief" ]; then
-        cp "$staged_brief" "$worktree_dir/IMPLEMENT.md"
-        rm "$staged_brief"
+        mv "$staged_brief" "$worktree_dir/IMPLEMENT.md"
     fi
 
     # 2. Prepend AGENTS.md with feature-session header
@@ -192,7 +196,7 @@ creates the worktree, inside `_coda_feature_orch_hook`. Two options
 for getting the brief content there:
 
 **Option A: File staging (recommended)**
-Orchestrator writes the brief to `$CODA_ORCH_DIR/<name>/staged-brief.md`
+Orchestrator writes the brief to `$ORCH_BASE_DIR/<name>/staged-brief.md`
 before calling `coda feature start`. The hook picks it up and moves
 it into the worktree.
 
