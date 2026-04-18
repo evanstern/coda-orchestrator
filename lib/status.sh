@@ -66,8 +66,8 @@ _orch_status_parse_session() {
 }
 
 # Resolve the working dir to use when querying gh for a project.
-# Tries $PROJECTS_DIR/<project>/main, then $PROJECTS_DIR/<project>, then the
-# orchestrator dir itself as a last resort.
+# Tries $PROJECTS_DIR/<project>/main, then $PROJECTS_DIR/<project>.
+# Returns 1 if neither exists.
 _orch_status_project_dir() {
     local project="$1"
     local base="${PROJECTS_DIR:-$HOME/projects}"
