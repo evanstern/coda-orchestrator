@@ -34,7 +34,7 @@ _orch_send() {
         if tmux has-session -t "${SESSION_PREFIX:-coda-}$name" 2>/dev/null || \
            tmux has-session -t "$name" 2>/dev/null; then
             echo "'$name' is a session, not an orchestrator."
-            echo "  Orchestrators live in: $CODA_ORCH_DIR/"
+            echo "  Orchestrators live in: $(dirname "$dir")/"
             echo "  To send to a session, use: tmux send-keys or opencode run --attach"
         else
             echo "Orchestrator not found: $name"
