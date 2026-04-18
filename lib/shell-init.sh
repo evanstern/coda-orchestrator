@@ -5,3 +5,4 @@
 _ORCH_FEATURE_HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$_ORCH_FEATURE_HOOK_DIR/feature-hook.sh"
+unset _ORCH_FEATURE_HOOK_DIR

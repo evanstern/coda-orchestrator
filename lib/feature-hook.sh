@@ -101,8 +101,12 @@ HEADER
     local permission='{"*":"allow"}'
     local serve_cmd="OPENCODE_PERMISSION='$permission' opencode serve --port $port"
 
-    tmux new-session -d -s "$session_name" -c "$worktree_dir" \
-        "$serve_cmd; exec \$SHELL"
+    if ! tmux new-session -d -s "$session_name" -c "$worktree_dir" \
+        "$serve_cmd; exec \$SHELL"; then
+        echo "Failed to create tmux session: $session_name" >&2
+        rm -f "$worktree_dir/port"
+        return 1
+    fi
 
     # 7. Wait for opencode serve to be ready
     local wait_secs=30

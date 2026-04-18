@@ -10,7 +10,40 @@ setup() {
 
     PLUGIN_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
     export _ORCH_PLUGIN_DIR="$PLUGIN_DIR"
-    source "$PLUGIN_DIR/coda-handler.sh"
+    export ORCH_BASE_DIR="$CODA_ORCH_DIR"
+    export ORCH_PORT_BASE="$CODA_ORCH_PORT_BASE"
+    export ORCH_PORT_RANGE="$CODA_ORCH_PORT_RANGE"
+
+    if [ -f "$PLUGIN_DIR/coda-handler.sh" ]; then
+        source "$PLUGIN_DIR/coda-handler.sh"
+    else
+        # Fallback for clean checkouts without the installed plugin handler:
+        # source tracked modules directly and define a minimal dispatcher.
+        for mod in lifecycle observe spawn; do
+            [ -f "$PLUGIN_DIR/lib/${mod}.sh" ] && source "$PLUGIN_DIR/lib/${mod}.sh"
+        done
+        _coda_orch() {
+            local subcmd="${1:-help}"
+            shift 2>/dev/null || true
+            case "$subcmd" in
+                spawns)  _orch_spawn_status "$@" ;;
+                help|"") echo "coda orch -- help (stub)" ;;
+                *) echo "Unknown orch subcommand: $subcmd"; return 1 ;;
+            esac
+        }
+    fi
+
+    # Stub helpers so tests don't depend on the gitignored lifecycle.sh.
+    if ! declare -f _orch_dir &>/dev/null; then
+        _orch_dir() { echo "$ORCH_BASE_DIR/$1"; }
+    fi
+    if ! declare -f _orch_new &>/dev/null; then
+        _orch_new() {
+            local name="$1"
+            mkdir -p "$ORCH_BASE_DIR/$name"
+            printf '{"watch":[],"ignore":[]}\n' > "$ORCH_BASE_DIR/$name/scope.json"
+        }
+    fi
 }
 
 teardown() {
