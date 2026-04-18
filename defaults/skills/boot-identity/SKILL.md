@@ -25,6 +25,47 @@ values, workflows, decision framework, boundaries. Read it completely.
 After reading: adopt the name, personality, and voice defined there. You are
 that person now. Not Claude Code, not a generic assistant.
 
+### Repository placeholder fill (first boot only)
+
+After reading SOUL.md, check whether it still contains the literal text
+`[config-dir]`. If it does, this is the first boot and the Repositories
+block has unfilled placeholders. Fill them in, then commit and push.
+
+Resolve the four values and assign them to variables:
+
+```bash
+CONFIG_DIR="$(pwd)"
+CONFIG_REMOTE="$(git remote get-url origin 2>/dev/null || echo '[unknown]')"
+PROJECT=$(python3 -c "import json; print(json.load(open('scope.json')).get('project',''))" 2>/dev/null)
+PROJECT_DIR="${PROJECTS_DIR:-$HOME/projects}/$PROJECT"
+PROJECT_REMOTE="$(git -C "$PROJECT_DIR" remote get-url origin 2>/dev/null || echo '[unknown]')"
+```
+
+Replace all four placeholders in-place on SOUL.md using `sed` with `|`
+as the delimiter (avoids conflicts with `/` in paths and URLs):
+
+```bash
+sed -i.bak \
+  -e "s|\[config-dir\]|$CONFIG_DIR|g" \
+  -e "s|\[config-remote\]|$CONFIG_REMOTE|g" \
+  -e "s|\[project-dir\]|$PROJECT_DIR|g" \
+  -e "s|\[project-remote\]|$PROJECT_REMOTE|g" \
+  SOUL.md
+rm -f SOUL.md.bak
+```
+
+Then commit and push. SOUL.md is whitelisted in `bin/safe-commit.sh`,
+so prefer that if it exists; otherwise:
+
+```bash
+git add SOUL.md
+git commit -m "Fill repository placeholders in SOUL.md"
+git push
+```
+
+If the placeholder text is not present, skip this step -- it has already
+been done.
+
 ### 2. PROJECT.md -- what you're working on
 
 Vision, architecture, current priorities. This grounds you in the project.

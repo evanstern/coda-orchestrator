@@ -43,3 +43,19 @@ setup() {
 @test "template: has References section" {
     grep -q '## References' "$TEMPLATE"
 }
+
+@test "template: has Repositories block with placeholders" {
+    grep -q '\*\*Repositories:\*\*' "$TEMPLATE"
+    grep -qF '[config-dir]' "$TEMPLATE"
+    grep -qF '[config-remote]' "$TEMPLATE"
+    grep -qF '[project-dir]' "$TEMPLATE"
+    grep -qF '[project-remote]' "$TEMPLATE"
+}
+
+@test "template: Repositories block sits between Boundaries and Personality" {
+    boundaries_line=$(grep -n '\*\*Boundaries:\*\*' "$TEMPLATE" | head -1 | cut -d: -f1)
+    repos_line=$(grep -n '\*\*Repositories:\*\*' "$TEMPLATE" | head -1 | cut -d: -f1)
+    personality_line=$(grep -n '## Personality' "$TEMPLATE" | head -1 | cut -d: -f1)
+    [ "$boundaries_line" -lt "$repos_line" ]
+    [ "$repos_line" -lt "$personality_line" ]
+}
