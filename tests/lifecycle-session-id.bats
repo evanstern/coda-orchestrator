@@ -11,10 +11,6 @@ setup() {
     # normally). When loading lifecycle.sh directly in tests, set them.
     export ORCH_PORT_BASE=4260
     export ORCH_PORT_RANGE=10
-    export ORCH_PORT_BASE=4260
-    export ORCH_PORT_RANGE=10
-    export SESSION_PREFIX="coda-test-"
-    export HOME="$BATS_TEST_TMPDIR/home"
 
     PLUGIN_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
     export _ORCH_PLUGIN_DIR="$PLUGIN_DIR"

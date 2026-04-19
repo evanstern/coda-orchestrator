@@ -166,13 +166,19 @@ _orch_send() {
                 --max-time 600 > /dev/null 2>&1
         ) &
 
-        # Detached background poller. Use setsid when available so the
-        # poller survives the caller's shell exiting.
+        # Detached background poller. Pass values as positional args
+        # (not interpolated into the script string) so shell metachars
+        # in log_file / session_id can't break parsing or inject.
+        local poll_script
+        poll_script="$(declare -f _orch_send_async_poll)
+_orch_send_async_poll \"\$1\" \"\$2\" \"\$3\" \"\$4\""
         if command -v setsid >/dev/null 2>&1; then
-            setsid bash -c "$(declare -f _orch_send_async_poll); _orch_send_async_poll '$base' '$session_id' '$msg_count_before' '$log_file'" \
+            setsid bash -c "$poll_script" _ \
+                "$base" "$session_id" "$msg_count_before" "$log_file" \
                 < /dev/null > /dev/null 2>&1 &
         else
-            nohup bash -c "$(declare -f _orch_send_async_poll); _orch_send_async_poll '$base' '$session_id' '$msg_count_before' '$log_file'" \
+            nohup bash -c "$poll_script" _ \
+                "$base" "$session_id" "$msg_count_before" "$log_file" \
                 < /dev/null > /dev/null 2>&1 &
         fi
         disown 2>/dev/null || true
