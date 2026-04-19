@@ -19,7 +19,7 @@
 
     "completions": {
       "orch": {
-        "subcommands": "new ls start stop status send edit done spawns prune"
+        "subcommands": "new ls start stop status send edit done spawns prune inbox"
       }
     },
 
@@ -119,6 +119,21 @@
           "archive": {
             "type": "boolean",
             "description": "Archive memory instead of deleting",
+            "optional": true
+          }
+        }
+      },
+      "coda_orch_inbox": {
+        "description": "Show or clear an orchestrator's inbox",
+        "command": ["coda", "orch", "inbox"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name"
+          },
+          "action": {
+            "type": "string",
+            "description": "'clear' to truncate inbox",
             "optional": true
           }
         }

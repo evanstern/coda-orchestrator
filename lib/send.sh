@@ -3,6 +3,25 @@
 # send.sh -- prompt dispatch via opencode serve HTTP API
 #
 
+# Append to inbox.md. Entry is bracketed by two `---` lines;
+# inbox-status.sh counts entries by that marker.
+_orch_inbox_append() {
+    local dir="$1"
+    local sender="$2"
+    local message="$3"
+
+    [ -n "$dir" ] || return 0
+    [ -d "$dir" ] || return 0
+
+    local ts
+    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+    {
+        printf '\n---\nfrom: %s\ntime: %s\n---\n%s\n' \
+            "${sender:-unknown}" "$ts" "$message"
+    } >> "$dir/inbox.md"
+}
+
 # Resolve the target session id for an orchestrator.
 # Preference order:
 #   1. $dir/session-id file (written on boot / updated by TUI hook)
@@ -183,6 +202,8 @@ _orch_send_async_poll \"\$1\" \"\$2\" \"\$3\" \"\$4\""
         fi
         disown 2>/dev/null || true
 
+        _orch_inbox_append "$dir" "${CODA_ORCH_NAME:-$USER}" "$message"
+
         echo "Sent async to $name"
         echo "  Log: $log_file"
         return 0
@@ -197,6 +218,7 @@ _orch_send_async_poll \"\$1\" \"\$2\" \"\$3\" \"\$4\""
 
     if [ -n "$response" ]; then
         echo "$response" | jq -r '[.parts[] | select(.type == "text") | .text] | join("")' 2>/dev/null
+        _orch_inbox_append "$dir" "${CODA_ORCH_NAME:-$USER}" "$message"
         return 0
     fi
 
@@ -212,6 +234,7 @@ _orch_send_async_poll \"\$1\" \"\$2\" \"\$3\" \"\$4\""
         if [ "$msg_count_now" -gt "$msg_count_before" ]; then
             curl -sf "$base/session/$session_id/message" \
                 | jq -r '[.[] | select(.info.role == "assistant")] | last | [.parts[] | select(.type == "text") | .text] | join("")' 2>/dev/null
+            _orch_inbox_append "$dir" "${CODA_ORCH_NAME:-$USER}" "$message"
             return 0
         fi
         attempts=$((attempts + 1))

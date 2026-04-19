@@ -89,6 +89,18 @@ that haven't been promoted to MEMORY.md yet.
 
 Check `dreams/` for any recent entries. These are reflective threads.
 
+### 6.5. Inbox -- pending messages
+
+Check `inbox.md`. If non-empty, these are messages from other agents or
+hooks that arrived since your last session. Read them, acknowledge them
+in your response, then clear the file:
+
+```
+./inbox.md
+```
+
+After reading: write an empty string to `inbox.md` to clear it.
+
 ### 7. scope.json -- your boundaries
 
 Know what sessions you watch and what you ignore.
