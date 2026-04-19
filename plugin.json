@@ -1,0 +1,128 @@
+{
+  "name": "orchestrator",
+  "version": "0.2.0",
+  "description": "Multi-instance orchestrator pattern for coda sessions -- soul, memory, scope",
+  "coda": ">=0.1.0",
+  "init": "lib/shell-init.sh",
+
+  "dependencies": {
+    "system": ["opencode", "jq", "git"]
+  },
+
+  "provides": {
+    "commands": {
+      "orch": {
+        "handler": "coda-handler.sh",
+        "function": "_coda_orch"
+      }
+    },
+
+    "completions": {
+      "orch": {
+        "subcommands": "new ls start stop status send edit done prune"
+      }
+    },
+
+    "hooks": {
+      "post-session-create": ["hooks/post-session-create/*"],
+      "pre-feature-teardown": ["hooks/pre-feature-teardown/*"]
+    },
+
+    "mcp_tools": {
+      "coda_orch_ls": {
+        "description": "List all orchestrator instances with status (running/stopped, port, scope)",
+        "command": ["coda", "orch", "ls", "--no-color"],
+        "params": {}
+      },
+      "coda_orch_new": {
+        "description": "Create a new orchestrator instance with optional soul and scope",
+        "command": ["coda", "orch", "new"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name (used in session naming: coda-orch--<name>)"
+          },
+          "soul": {
+            "type": "string",
+            "description": "Plain-speech personality description, expanded into SOUL.md",
+            "optional": true
+          },
+          "scope": {
+            "type": "string",
+            "description": "Session name glob pattern to watch (e.g. coda-myapp--*)",
+            "optional": true
+          }
+        }
+      },
+      "coda_orch_start": {
+        "description": "Start an orchestrator (launches opencode serve in tmux session)",
+        "command": ["coda", "orch", "start"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name"
+          }
+        }
+      },
+      "coda_orch_stop": {
+        "description": "Stop a running orchestrator",
+        "command": ["coda", "orch", "stop"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name"
+          }
+        }
+      },
+      "coda_orch_status": {
+        "description": "Rich status view of all sessions in an orchestrator's scope",
+        "command": ["coda", "orch", "status"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name"
+          }
+        }
+      },
+      "coda_orch_send": {
+        "description": "Send a prompt to an orchestrator via opencode run --attach",
+        "command": ["coda", "orch", "send"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name"
+          },
+          "message": {
+            "type": "string",
+            "description": "Prompt message to send"
+          }
+        }
+      },
+      "coda_orch_edit": {
+        "description": "Open an orchestrator's SOUL.md for editing (returns file path)",
+        "command": ["coda", "orch", "edit"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name"
+          }
+        }
+      },
+      "coda_orch_done": {
+        "description": "Tear down an orchestrator (stop session, optionally archive)",
+        "command": ["coda", "orch", "done"],
+        "params": {
+          "name": {
+            "type": "string",
+            "description": "Orchestrator name"
+          },
+          "archive": {
+            "type": "boolean",
+            "description": "Archive memory instead of deleting",
+            "optional": true
+          }
+        }
+      }
+    }
+  }
+}
