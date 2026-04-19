@@ -126,3 +126,4 @@ JSON
 
     unset -f tmux
 }
+

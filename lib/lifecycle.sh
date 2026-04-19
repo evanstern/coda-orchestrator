@@ -264,6 +264,20 @@ _orch_start() {
         echo "Warning: timed out waiting for serve on port $port" >&2
     fi
 
+    # Background prune: wait for health, then prune stale sessions
+    # scoped to this orchestrator's directory. Non-blocking; failures
+    # are swallowed so prune can never fail orch start.
+    if declare -f _orch_prune_dir >/dev/null 2>&1; then
+        (
+            for _orch_start_prune_i in 1 2 3 4 5; do
+                curl -sf "http://localhost:$port/global/health" >/dev/null 2>&1 && break
+                sleep 1
+            done
+            _orch_prune_dir "$port" "$dir" >/dev/null 2>&1 || true
+        ) &
+        disown 2>/dev/null || true
+    fi
+
     echo "Orchestrator started: $name"
     echo "  Session: $session"
     echo "  Port:    $port"
@@ -377,3 +391,11 @@ _orch_done() {
         echo "Orchestrator removed: $name"
     fi
 }
+
+# Source prune.sh for session pruning primitives
+_orch_lifecycle_dir="${BASH_SOURCE%/*}"
+if [ -f "$_orch_lifecycle_dir/prune.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$_orch_lifecycle_dir/prune.sh"
+fi
+unset _orch_lifecycle_dir

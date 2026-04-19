@@ -10,8 +10,9 @@ ORCH_BASE_DIR="${CODA_ORCH_DIR:-$HOME/.config/coda/orchestrators}"
 ORCH_PORT_BASE="${CODA_ORCH_PORT_BASE:-4200}"
 ORCH_PORT_RANGE="${CODA_ORCH_PORT_RANGE:-20}"
 
-# Source library modules
-for _orch_mod in lifecycle soul observe send spawn; do
+# Source library modules. prune is sourced before lifecycle so
+# _orch_start can reference _orch_prune_dir.
+for _orch_mod in prune lifecycle soul observe send spawn; do
     if [ -f "$_ORCH_PLUGIN_DIR/lib/${_orch_mod}.sh" ]; then
         # shellcheck source=/dev/null
         source "$_ORCH_PLUGIN_DIR/lib/${_orch_mod}.sh"
@@ -33,6 +34,7 @@ _coda_orch() {
         edit)    _orch_edit "$@" ;;
         done)    _orch_done "$@" ;;
         spawns)  _orch_spawn_status "$@" ;;
+        prune)   _orch_prune "$@" ;;
         help|"")
             cat <<'EOF'
 coda orch -- orchestrator management
@@ -47,6 +49,7 @@ USAGE
   coda orch edit <name>                                     Edit SOUL.md
   coda orch done <name> [--archive]                         Tear down orchestrator
   coda orch spawns <name>                                   List spawned sessions
+  coda orch prune [name] [--hard] [--dry-run]               Prune stale sessions
 EOF
             ;;
         *)
