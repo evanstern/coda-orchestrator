@@ -229,6 +229,41 @@ _orch_start() {
 
     tmux new-session -d -s "$session" -c "$dir" "$serve_cmd; exec $SHELL"
 
+    # Wait for opencode serve to be ready, then persist the active
+    # session id (scoped to $dir) to $dir/session-id so coda orch send
+    # can target the right session.
+    local base="http://localhost:$port"
+    local wait_secs=10
+    local elapsed=0
+    while [ $elapsed -lt $wait_secs ]; do
+        if curl -sf "$base/session" >/dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    if [ $elapsed -lt $wait_secs ]; then
+        local session_id
+        session_id=$(curl -sf "$base/session" \
+            | jq -r --arg d "$dir" \
+                '[.[] | select(.directory == $d)] | sort_by(.time.created) | last | .id // empty' 2>/dev/null)
+
+        if [ -z "$session_id" ]; then
+            session_id=$(curl -sf -X POST "$base/session" \
+                -H 'Content-Type: application/json' -d '{}' \
+                | jq -r '.id // empty' 2>/dev/null)
+        fi
+
+        if [ -n "$session_id" ]; then
+            echo "$session_id" > "$dir/session-id"
+        else
+            echo "Warning: could not determine session ID for $name" >&2
+        fi
+    else
+        echo "Warning: timed out waiting for serve on port $port" >&2
+    fi
+
     echo "Orchestrator started: $name"
     echo "  Session: $session"
     echo "  Port:    $port"
@@ -258,6 +293,7 @@ _orch_stop() {
     local dir
     dir="$(_orch_dir "$name")"
     rm -f "$dir/port"
+    rm -f "$dir/session-id"
 
     echo "Orchestrator stopped: $name"
 }
