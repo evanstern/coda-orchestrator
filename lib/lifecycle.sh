@@ -130,7 +130,7 @@ _orch_new() {
 
 _orch_generate_project_config() {
     local name="$1"
-    printf '{"instructions": ["SOUL.md", "MEMORY.md", "PROJECT.md"]}\n'
+    printf '{"instructions": ["SOUL.md", "MEMORY.md", "PROJECT.md", "inbox.md"]}\n'
 }
 
 _orch_generate_agents_md() {
@@ -215,6 +215,19 @@ _orch_start() {
     [ -f "$dir/AGENTS.md" ] || _orch_generate_agents_md "$name" > "$dir/AGENTS.md"
     [ -f "$dir/opencode.json" ] || _orch_generate_project_config "$name" > "$dir/opencode.json"
 
+    if [ -f "$dir/opencode.json" ] && command -v jq &>/dev/null; then
+        if jq -e '.instructions | type == "array"' "$dir/opencode.json" >/dev/null 2>&1 && \
+           ! jq -e '.instructions | index("inbox.md")' "$dir/opencode.json" >/dev/null 2>&1; then
+            local tmp_file
+            tmp_file=$(mktemp "$dir/opencode.json.tmp.XXXXXX") || return 1
+            if jq '.instructions += ["inbox.md"]' "$dir/opencode.json" > "$tmp_file"; then
+                mv "$tmp_file" "$dir/opencode.json"
+            else
+                rm -f "$tmp_file"
+            fi
+        fi
+    fi
+
     local port
     port=$(_orch_find_free_port)
     if [ -z "$port" ]; then
@@ -228,6 +241,10 @@ _orch_start() {
     echo "$port" > "$dir/port"
 
     tmux new-session -d -s "$session" -c "$dir" "$serve_cmd; exec $SHELL"
+
+    tmux set-environment -t "$session" CODA_ORCH_NAME "$name"
+    tmux set-option -t "$session" status-right \
+        "#($_ORCH_PLUGIN_DIR/lib/inbox-status.sh $dir) #(tmux list-sessions | wc -l | tr -d ' ') sessions | %H:%M"
 
     # Wait for opencode serve to be ready, then persist the active
     # session id (scoped to $dir) to $dir/session-id so coda orch send
