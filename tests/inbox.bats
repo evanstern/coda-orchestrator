@@ -98,6 +98,16 @@ teardown() {
     [ -z "$output" ]
 }
 
+@test "inbox-status: emits nothing when file has content but no --- markers" {
+    local dir="$BATS_TEST_TMPDIR/inbox4b"
+    mkdir -p "$dir"
+    printf 'some prose with no markers\n' > "$dir/inbox.md"
+
+    run "$PLUGIN_DIR/lib/inbox-status.sh" "$dir"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 @test "inbox-status: emits nothing for missing file" {
     local dir="$BATS_TEST_TMPDIR/inbox5"
     mkdir -p "$dir"
@@ -188,6 +198,49 @@ teardown() {
     run jq '[.instructions[] | select(. == "inbox.md")] | length' "$dir/opencode.json"
     [ "$status" -eq 0 ]
     [ "$output" = "1" ]
+
+    unset -f tmux curl
+}
+
+@test "start: leaves opencode.json intact when instructions is not an array" {
+    if [ ! -f "$PLUGIN_DIR/lib/lifecycle.sh" ]; then
+        skip "lifecycle.sh not installed"
+    fi
+
+    local name="nonarrayorch"
+    local dir="$ORCH_BASE_DIR/$name"
+    mkdir -p "$dir"
+    local original='{"instructions":"SOUL.md","other":42}'
+    printf '%s\n' "$original" > "$dir/opencode.json"
+
+    tmux() {
+        case "$1" in
+            has-session)     return 1 ;;
+            new-session)     return 0 ;;
+            set-environment) return 0 ;;
+            set-option)      return 0 ;;
+            *)               command tmux "$@" ;;
+        esac
+    }
+    export -f tmux
+
+    curl() {
+        if [[ "$*" == *"-X POST"* ]]; then
+            echo '{"id":"ses_noarr"}'
+            return 0
+        fi
+        echo '[]'
+    }
+    export -f curl
+
+    run _orch_start "$name"
+    [ "$status" -eq 0 ]
+
+    [ -s "$dir/opencode.json" ]
+    run jq -r '.other' "$dir/opencode.json"
+    [ "$output" = "42" ]
+    run jq -r '.instructions' "$dir/opencode.json"
+    [ "$output" = "SOUL.md" ]
 
     unset -f tmux curl
 }

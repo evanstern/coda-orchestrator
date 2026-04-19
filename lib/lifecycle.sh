@@ -216,11 +216,15 @@ _orch_start() {
     [ -f "$dir/opencode.json" ] || _orch_generate_project_config "$name" > "$dir/opencode.json"
 
     if [ -f "$dir/opencode.json" ] && command -v jq &>/dev/null; then
-        if jq -e '.instructions' "$dir/opencode.json" >/dev/null 2>&1 && \
+        if jq -e '.instructions | type == "array"' "$dir/opencode.json" >/dev/null 2>&1 && \
            ! jq -e '.instructions | index("inbox.md")' "$dir/opencode.json" >/dev/null 2>&1; then
-            local tmp
-            tmp=$(jq '.instructions += ["inbox.md"]' "$dir/opencode.json")
-            echo "$tmp" > "$dir/opencode.json"
+            local tmp_file
+            tmp_file=$(mktemp "$dir/opencode.json.tmp.XXXXXX") || return 1
+            if jq '.instructions += ["inbox.md"]' "$dir/opencode.json" > "$tmp_file"; then
+                mv "$tmp_file" "$dir/opencode.json"
+            else
+                rm -f "$tmp_file"
+            fi
         fi
     fi
 

@@ -96,7 +96,7 @@ hooks that arrived since your last session. Read them, acknowledge them
 in your response, then clear the file:
 
 ```
-./inbox.md
+cat inbox.md
 ```
 
 After reading: write an empty string to `inbox.md` to clear it.

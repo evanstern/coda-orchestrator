@@ -9,8 +9,8 @@ inbox="$dir/inbox.md"
 [ -f "$inbox" ] || exit 0
 [ -s "$inbox" ] || exit 0
 
-markers=$(grep -c '^---$' "$inbox" 2>/dev/null || echo 0)
-count=$(( markers / 2 ))
+markers=$(grep -c '^---$' "$inbox" 2>/dev/null || :)
+count=$(( ${markers:-0} / 2 ))
 
 [ "$count" -gt 0 ] || exit 0
 
