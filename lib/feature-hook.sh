@@ -15,6 +15,12 @@
 # feature-session convention, and auto-triggers the agent when a brief is
 # present.
 #
+# Window mode (CODA_ORCH_WINDOW_MODE=1):
+#   Instead of creating a new top-level tmux session, the feature is spawned
+#   as a tmux window inside the orchestrator's existing session via the
+#   configured layout's `_layout_spawn`. opencode serve still runs detached
+#   so `opencode run --attach` works. See designs/features-as-orchestrator-windows.md.
+#
 
 _coda_feature_orch_hook() {
     local orch_name="$1"
@@ -96,16 +102,60 @@ HEADER
 
     echo "$port" > "$worktree_dir/port"
 
-    # 6. Start opencode serve in a feature-session tmux session
-    local session_name="${SESSION_PREFIX:-coda-}${project_name}--${branch}"
+    # 6. Start opencode serve -- dual path on CODA_ORCH_WINDOW_MODE.
     local permission='{"*":"allow"}'
-    local serve_cmd="OPENCODE_PERMISSION='$permission' opencode serve --port $port"
+    local session_name
 
-    if ! tmux new-session -d -s "$session_name" -c "$worktree_dir" \
-        "$serve_cmd; exec \$SHELL"; then
-        echo "Failed to create tmux session: $session_name" >&2
-        rm -f "$worktree_dir/port"
-        return 1
+    if [ "${CODA_ORCH_WINDOW_MODE:-}" = "1" ]; then
+        # --- Window mode: spawn a window inside the orchestrator session ---
+
+        local orch_session="${SESSION_PREFIX:-coda-}orch--${orch_name}"
+
+        # Auto-start the orchestrator session if it isn't running.
+        if ! tmux has-session -t "$orch_session" 2>/dev/null; then
+            if command -v _orch_start >/dev/null 2>&1; then
+                _orch_start "$orch_name" >/dev/null 2>&1 || true
+            fi
+            if ! tmux has-session -t "$orch_session" 2>/dev/null; then
+                echo "Orchestrator session not running and could not be started: $orch_session" >&2
+                rm -f "$worktree_dir/port"
+                return 1
+            fi
+        fi
+
+        # Start opencode serve detached (not in tmux) so the window hosts the
+        # TUI for humans while serve handles programmatic access.
+        (
+            cd "$worktree_dir" || exit 1
+            OPENCODE_PERMISSION="$permission" opencode serve --port "$port" \
+                >"$worktree_dir/serve.log" 2>&1 &
+            disown $! 2>/dev/null || true
+        )
+
+        # Spawn the feature window via the configured layout.
+        if ! command -v _layout_spawn >/dev/null 2>&1; then
+            echo "_layout_spawn unavailable -- is a coda layout sourced?" >&2
+            rm -f "$worktree_dir/port"
+            return 1
+        fi
+
+        local window_target="${orch_session}:${branch}"
+        CODA_LAYOUT_TARGET="$window_target" _layout_spawn "$orch_session" "$worktree_dir"
+
+        # session_name uses slash form for path/log readability.
+        session_name="${orch_session}/${branch}"
+    else
+        # --- Legacy mode: top-level feature-session tmux session ---
+
+        session_name="${SESSION_PREFIX:-coda-}${project_name}--${branch}"
+        local serve_cmd="OPENCODE_PERMISSION='$permission' opencode serve --port $port"
+
+        if ! tmux new-session -d -s "$session_name" -c "$worktree_dir" \
+            "$serve_cmd; exec \$SHELL"; then
+            echo "Failed to create tmux session: $session_name" >&2
+            rm -f "$worktree_dir/port"
+            return 1
+        fi
     fi
 
     # 7. Wait for opencode serve to be ready
@@ -122,7 +172,12 @@ HEADER
 
     if [ $elapsed -ge $wait_secs ]; then
         echo "Timed out waiting for opencode serve on port $port" >&2
-        tmux kill-session -t "$session_name" 2>/dev/null
+        if [ "${CODA_ORCH_WINDOW_MODE:-}" = "1" ]; then
+            local orch_session="${SESSION_PREFIX:-coda-}orch--${orch_name}"
+            tmux kill-window -t "${orch_session}:${branch}" 2>/dev/null || true
+        else
+            tmux kill-session -t "$session_name" 2>/dev/null
+        fi
         rm -f "$worktree_dir/port"
         return 1
     fi
