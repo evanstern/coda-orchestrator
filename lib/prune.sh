@@ -78,7 +78,10 @@ _orch_prune_dir() {
 
     local base="http://localhost:$port"
     local encoded_dir
-    encoded_dir=$(_orch_prune_urlencode "$directory")
+    if ! encoded_dir=$(_orch_prune_urlencode "$directory") || [ -z "$encoded_dir" ]; then
+        echo "prune: failed to URL-encode directory, refusing to run (would defeat scoping)" >&2
+        return 1
+    fi
 
     # 1. Get active session IDs
     local status_json
@@ -234,6 +237,16 @@ _orch_prune() {
     while [ $# -gt 0 ]; do
         case "$1" in
             --keep|--days)
+                if [ $# -lt 2 ] || [ -z "$2" ]; then
+                    echo "prune: $1 requires a value" >&2
+                    return 1
+                fi
+                case "$2" in
+                    ''|*[!0-9]*)
+                        echo "prune: $1 must be a non-negative integer, got: $2" >&2
+                        return 1
+                        ;;
+                esac
                 flags+=("$1" "$2")
                 shift 2
                 ;;

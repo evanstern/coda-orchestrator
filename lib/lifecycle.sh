@@ -269,11 +269,17 @@ _orch_start() {
     # are swallowed so prune can never fail orch start.
     if declare -f _orch_prune_dir >/dev/null 2>&1; then
         (
+            local prune_ready=0
             for _orch_start_prune_i in 1 2 3 4 5; do
-                curl -sf "http://localhost:$port/global/health" >/dev/null 2>&1 && break
+                if curl -sf "http://localhost:$port/global/health" >/dev/null 2>&1; then
+                    prune_ready=1
+                    break
+                fi
                 sleep 1
             done
-            _orch_prune_dir "$port" "$dir" >/dev/null 2>&1 || true
+            if [ "$prune_ready" -eq 1 ]; then
+                _orch_prune_dir "$port" "$dir" >/dev/null 2>&1 || true
+            fi
         ) &
         disown 2>/dev/null || true
     fi
