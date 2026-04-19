@@ -19,7 +19,7 @@
 
     "completions": {
       "orch": {
-        "subcommands": "new ls start stop status send edit done prune"
+        "subcommands": "new ls start stop status send edit done spawns prune"
       }
     },
 

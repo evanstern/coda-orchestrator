@@ -338,12 +338,20 @@ _mk_sessions_json() {
 # --- live opencode serve: two-directory scoping ---
 
 _prune_test_pick_port() {
+    if ! command -v ss >/dev/null 2>&1; then
+        echo 4290
+        return 0
+    fi
     local p=4290
     while ss -tln 2>/dev/null | grep -q ":$p "; do
         p=$((p + 1))
         [ "$p" -gt 4330 ] && return 1
     done
     echo "$p"
+}
+
+_prune_test_urlencode() {
+    printf '%s' "$1" | jq -sRr @uri
 }
 
 _prune_test_wait_ready() {
@@ -380,8 +388,8 @@ _prune_test_wait_ready() {
     fi
 
     local encA encB
-    encA=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$dir_a")
-    encB=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$dir_b")
+    encA=$(_prune_test_urlencode "$dir_a")
+    encB=$(_prune_test_urlencode "$dir_b")
 
     local base="http://localhost:$port" i
     for i in 1 2 3; do

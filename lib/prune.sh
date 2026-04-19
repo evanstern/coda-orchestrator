@@ -28,8 +28,20 @@ _orch_prune_dir() {
         case "$1" in
             --hard)    hard=true; shift ;;
             --dry-run) dry_run=true; shift ;;
-            --keep)    keep="$2"; shift 2 ;;
-            --days)    days="$2"; shift 2 ;;
+            --keep|--days)
+                if [ $# -lt 2 ] || [ -z "$2" ]; then
+                    echo "prune: $1 requires a value" >&2
+                    return 1
+                fi
+                case "$2" in
+                    ''|*[!0-9]*)
+                        echo "prune: $1 must be a non-negative integer, got: $2" >&2
+                        return 1
+                        ;;
+                esac
+                if [ "$1" = "--keep" ]; then keep="$2"; else days="$2"; fi
+                shift 2
+                ;;
             --*)       echo "Unknown flag: $1" >&2; return 1 ;;
             *)
                 if [ -z "$port" ]; then
@@ -165,10 +177,20 @@ _orch_prune_dir() {
     echo "pruned: kept=$kept archived=$archived deleted=$deleted (dir=$(basename "$directory"))"
 }
 
-# URL-encode a string (minimal: spaces, special chars common in paths).
+# URL-encode a string. Tries jq (a declared plugin dependency) first,
+# then python3 as a fallback. Fails loudly if neither is available so
+# directory scoping is never silently bypassed.
 _orch_prune_urlencode() {
-    python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1" 2>/dev/null \
-        || printf '%s' "$1"
+    if command -v jq >/dev/null 2>&1; then
+        printf '%s' "$1" | jq -sRr @uri
+        return $?
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"
+        return $?
+    fi
+    echo "_orch_prune_urlencode: requires jq or python3 for URL encoding" >&2
+    return 1
 }
 
 # Prune all sessions for a given worktree directory across all running
@@ -194,8 +216,9 @@ _orch_prune_sessions_for_dir() {
         port=$(cat "$pf")
         [ -z "$port" ] && continue
 
-        # Check health before hitting the port
-        if ! curl -sf "http://localhost:$port/session" >/dev/null 2>&1; then
+        # Liveness check: /global/health is tiny and avoids pulling the
+        # (potentially huge) shared session list just to confirm a port.
+        if ! curl -sf "http://localhost:$port/global/health" >/dev/null 2>&1; then
             continue
         fi
 
