@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+#
+# 60-feature-spawn-setup -- wire up opencode serve + brief for feature
+# windows spawned via `coda feature start --orch <name>`.
+#
+# By the time this hook fires, the tmux window already exists inside the
+# orchestrator session (created by _coda_attach via CODA_ORCH_WINDOW_MODE).
+# We do NOT create the window here. We just:
+#   1. Start opencode serve in the background (detached)
+#   2. Move staged brief into IMPLEMENT.md
+#   3. Prepend AGENTS.md with the feature-session header
+#   4. Auto-trigger the agent via `opencode run --attach`
+#
+# Env (set by _coda_feature_start via local -x, see coda CLI PR #44):
+#   CODA_FEATURE_BRANCH  -- feature branch name
+#   CODA_WORKTREE_DIR    -- absolute path to worktree
+#   CODA_ORCH_NAME       -- orchestrator name (only set when --orch used)
+#   CODA_SESSION_NAME    -- tmux target (e.g. coda-orch--riley:91-feature-hook)
+#   CODA_PROJECT_NAME    -- project name
+#   CODA_PROJECT_DIR     -- project root
+#
+# Gate: only run when both CODA_FEATURE_BRANCH and CODA_ORCH_NAME are set.
+# Plain attach (no feature) and non-orch feature starts must not be affected.
+
+set -u
+
+[ -n "${CODA_FEATURE_BRANCH:-}" ] && [ -n "${CODA_ORCH_NAME:-}" ] || exit 0
+[ -n "${CODA_WORKTREE_DIR:-}" ] || exit 0
+
+branch="$CODA_FEATURE_BRANCH"
+worktree_dir="$CODA_WORKTREE_DIR"
+orch_name="$CODA_ORCH_NAME"
+
+# 1. Resolve orchestrator config directory.
+base_dir="${ORCH_BASE_DIR:-${CODA_ORCH_DIR:-$HOME/.config/coda/orchestrators}}"
+dir="$base_dir/$orch_name"
+
+if [ ! -d "$dir" ]; then
+    echo "60-feature-spawn-setup: orchestrator not found: $orch_name ($dir)" >&2
+    exit 1
+fi
+
+if [ ! -d "$worktree_dir" ]; then
+    echo "60-feature-spawn-setup: worktree not found: $worktree_dir" >&2
+    exit 1
+fi
+
+# 2. Move staged brief into IMPLEMENT.md if present.
+if [ -f "$dir/staged-brief.md" ]; then
+    mv "$dir/staged-brief.md" "$worktree_dir/IMPLEMENT.md"
+fi
+
+# 3. Prepend AGENTS.md with feature-session header.
+agents_header=$(cat <<'HEADER'
+# FEATURE SESSION
+
+You are a feature implementation agent, NOT the orchestrator.
+Read IMPLEMENT.md for your task brief.
+When you receive "read @IMPLEMENT.md and execute", start immediately.
+Report "PR ready: <url>" when done.
+
+---
+HEADER
+)
+
+if [ -f "$worktree_dir/AGENTS.md" ]; then
+    tmp=$(mktemp)
+    printf '%s\n\n' "$agents_header" > "$tmp"
+    cat "$worktree_dir/AGENTS.md" >> "$tmp"
+    mv "$tmp" "$worktree_dir/AGENTS.md"
+else
+    printf '%s\n' "$agents_header" > "$worktree_dir/AGENTS.md"
+fi
+
+# 4. Add IMPLEMENT.md / AGENTS.md to .gitignore if not already there.
+if [ ! -f "$worktree_dir/.gitignore" ] \
+    || ! grep -q 'IMPLEMENT.md' "$worktree_dir/.gitignore" 2>/dev/null; then
+    printf '\n# Feature session files\nIMPLEMENT.md\nAGENTS.md\n*.feature-brief.md\n' \
+        >> "$worktree_dir/.gitignore"
+fi
+
+# 5. Allocate a free port (inline port-scan -- avoids sourcing coda-handler.sh).
+find_free_port() {
+    local port_base="${ORCH_PORT_BASE:-4200}"
+    local port_range="${ORCH_PORT_RANGE:-20}"
+    local port="$port_base"
+    local max=$((port_base + port_range))
+
+    local claimed_ports=""
+    if [ -d "$base_dir" ]; then
+        for pf in "$base_dir"/*/port; do
+            [ -f "$pf" ] && claimed_ports="$claimed_ports $(cat "$pf" 2>/dev/null)"
+        done
+    fi
+
+    while [ "$port" -le "$max" ]; do
+        if ! ss -tlnp 2>/dev/null | grep -q ":${port} " \
+            && ! echo "$claimed_ports" | grep -qw "$port"; then
+            echo "$port"
+            return 0
+        fi
+        port=$((port + 1))
+    done
+    return 1
+}
+
+port=$(find_free_port)
+if [ -z "$port" ]; then
+    port_base="${ORCH_PORT_BASE:-4200}"
+    port_range="${ORCH_PORT_RANGE:-20}"
+    echo "60-feature-spawn-setup: no free ports in ${port_base}-$((port_base + port_range))" >&2
+    exit 1
+fi
+
+echo "$port" > "$worktree_dir/port"
+
+# 6. Start opencode serve detached. The window is already up; serve runs
+#    outside tmux so `opencode run --attach` keeps working.
+permission='{"*":"allow"}'
+(
+    cd "$worktree_dir" || exit 1
+    OPENCODE_PERMISSION="$permission" opencode serve --port "$port" \
+        > "$worktree_dir/serve.log" 2>&1 &
+    disown $! 2>/dev/null || true
+)
+
+# 7. Wait for serve to be ready (30s timeout).
+wait_secs=30
+elapsed=0
+while [ $elapsed -lt $wait_secs ]; do
+    if curl -sf "http://localhost:$port/session" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+done
+
+if [ $elapsed -ge $wait_secs ]; then
+    echo "60-feature-spawn-setup: timed out waiting for opencode serve on port $port" >&2
+    rm -f "$worktree_dir/port"
+    exit 1
+fi
+
+# 8. Auto-trigger the feature agent if IMPLEMENT.md is present.
+if [ -f "$worktree_dir/IMPLEMENT.md" ]; then
+    log_dir="$dir/logs"
+    mkdir -p "$log_dir"
+    log_file="$log_dir/feature-${branch//\//-}.log"
+
+    opencode run --attach "http://localhost:$port" --format json \
+        "read @IMPLEMENT.md and execute" \
+        >> "$log_file" 2>&1 &
+    disown $! 2>/dev/null || true
+fi
+
+exit 0

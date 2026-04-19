@@ -216,3 +216,101 @@ teardown() {
 
     [ ! -f "$WORKTREE_DIR/port" ]
 }
+
+# --- New-style hook: hooks/post-session-create/60-feature-spawn-setup ---
+#
+# These tests exercise the standalone hook script that receives feature
+# context via CODA_* env vars (from coda CLI PR #44). The hook does NOT
+# create the tmux window -- that's already done by _coda_attach when
+# CODA_ORCH_WINDOW_MODE=1 (coda CLI PR #40). The hook only wires up the
+# opencode serve + brief + auto-trigger.
+
+HOOK_SCRIPT="$BATS_TEST_DIRNAME/../hooks/post-session-create/60-feature-spawn-setup"
+
+@test "hook: exits 0 silently when CODA_FEATURE_BRANCH is unset" {
+    unset CODA_FEATURE_BRANCH
+    export CODA_ORCH_NAME="$ORCH_NAME"
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+
+    run bash "$HOOK_SCRIPT"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -f "$WORKTREE_DIR/port" ]
+}
+
+@test "hook: exits 0 silently when CODA_ORCH_NAME is unset" {
+    export CODA_FEATURE_BRANCH="$BRANCH"
+    unset CODA_ORCH_NAME
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+
+    run bash "$HOOK_SCRIPT"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -f "$WORKTREE_DIR/port" ]
+}
+
+@test "hook: moves staged-brief.md to IMPLEMENT.md when present" {
+    export CODA_FEATURE_BRANCH="$BRANCH"
+    export CODA_ORCH_NAME="$ORCH_NAME"
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+    export CODA_PROJECT_NAME="$PROJECT_NAME"
+
+    echo "BRIEF CONTENT" > "$CODA_ORCH_DIR/$ORCH_NAME/staged-brief.md"
+
+    run bash "$HOOK_SCRIPT"
+    [ "$status" -eq 0 ]
+
+    [ ! -f "$CODA_ORCH_DIR/$ORCH_NAME/staged-brief.md" ]
+    [ -f "$WORKTREE_DIR/IMPLEMENT.md" ]
+    run cat "$WORKTREE_DIR/IMPLEMENT.md"
+    [ "$output" = "BRIEF CONTENT" ]
+}
+
+@test "hook: prepends AGENTS.md with feature-session header" {
+    export CODA_FEATURE_BRANCH="$BRANCH"
+    export CODA_ORCH_NAME="$ORCH_NAME"
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+    export CODA_PROJECT_NAME="$PROJECT_NAME"
+
+    printf 'ORIGINAL AGENTS CONTENT\n' > "$WORKTREE_DIR/AGENTS.md"
+
+    run bash "$HOOK_SCRIPT"
+    [ "$status" -eq 0 ]
+
+    [ -f "$WORKTREE_DIR/AGENTS.md" ]
+    run cat "$WORKTREE_DIR/AGENTS.md"
+    [[ "$output" == *"# FEATURE SESSION"* ]]
+    [[ "$output" == *"You are a feature implementation agent"* ]]
+    [[ "$output" == *"ORIGINAL AGENTS CONTENT"* ]]
+}
+
+@test "hook: skips brief injection when staged-brief.md does not exist" {
+    export CODA_FEATURE_BRANCH="$BRANCH"
+    export CODA_ORCH_NAME="$ORCH_NAME"
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+    export CODA_PROJECT_NAME="$PROJECT_NAME"
+
+    [ ! -f "$CODA_ORCH_DIR/$ORCH_NAME/staged-brief.md" ]
+
+    run bash "$HOOK_SCRIPT"
+    [ "$status" -eq 0 ]
+
+    [ ! -f "$WORKTREE_DIR/IMPLEMENT.md" ]
+}
+
+@test "hook: writes port file in worktree dir" {
+    export CODA_FEATURE_BRANCH="$BRANCH"
+    export CODA_ORCH_NAME="$ORCH_NAME"
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+    export CODA_PROJECT_NAME="$PROJECT_NAME"
+
+    run bash "$HOOK_SCRIPT"
+    [ "$status" -eq 0 ]
+
+    [ -f "$WORKTREE_DIR/port" ]
+    run cat "$WORKTREE_DIR/port"
+    # Port should be a number in the configured range.
+    [[ "$output" =~ ^[0-9]+$ ]]
+    [ "$output" -ge "$ORCH_PORT_BASE" ]
+    [ "$output" -le "$((ORCH_PORT_BASE + ORCH_PORT_RANGE))" ]
+}

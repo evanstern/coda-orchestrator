@@ -2,6 +2,17 @@
 #
 # feature-hook.sh -- hook invoked by `coda feature start --orch <name>`
 #
+# NOTE: As of card #91, this function is the legacy path.
+# When `coda feature start --orch <name>` is used, the serve + brief setup
+# is handled by hooks/post-session-create/60-feature-spawn-setup, which
+# receives feature context via CODA_* env vars exported by
+# _coda_feature_start (coda CLI PR #44). The tmux window itself is created
+# by _coda_attach via CODA_ORCH_WINDOW_MODE=1 + CODA_ORCH_TARGET (coda CLI
+# PR #40) before any hook fires.
+#
+# This function remains for direct invocation compatibility (older coda
+# CLIs, scripts that call _coda_feature_orch_hook directly).
+#
 # After coda creates the worktree, it calls `_coda_feature_orch_hook` with:
 #   $1 orch_name      -- orchestrator whose config directs the spawn
 #   $2 branch         -- feature branch name (e.g. "42-fix-thing")
