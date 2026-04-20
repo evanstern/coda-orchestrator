@@ -5,16 +5,4 @@ node_modules/
 .DS_Store
 port
 IMPLEMENT.md
-AGENTS.md
 *.feature-brief.md
-
-# Plugin code -- managed by plugin install, not tracked here
-coda-handler.sh
-plugin.json
-lib/lifecycle.sh
-lib/observe.sh
-lib/soul.sh
-lib/ui.sh
-# defaults/scope.json.tmpl is now tracked (like SOUL.md.tmpl)
-hooks/
-tests/lifecycle.bats
