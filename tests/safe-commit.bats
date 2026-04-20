@@ -15,12 +15,17 @@ setup() {
 
     # Stub git: fake diff/commit/push responses. $REPO is exported so the
     # stub can find a writable log path regardless of the script's cwd.
+    # STAGED_FILES is newline-separated; when the script requests NUL
+    # output (`-z`), we translate newlines to NULs on the fly.
     cat > "$REPO/bin-stub/git" <<'EOF'
 #!/usr/bin/env bash
 case "$1 $2" in
     "diff --cached")
-        # Staged files are driven by env var STAGED_FILES (newline separated)
-        printf '%s\n' "${STAGED_FILES:-}"
+        if [ "$3" = "--name-only" ] && [ "$4" = "-z" ]; then
+            printf '%s' "${STAGED_FILES:-}" | tr '\n' '\0'
+        else
+            printf '%s\n' "${STAGED_FILES:-}"
+        fi
         ;;
     "commit "*|"commit")
         echo "commit $*" >> "${REPO:-/tmp}/git.log"
@@ -84,4 +89,37 @@ EOF
         run bash "$SCRIPT" -m "m"
     [ "$status" -eq 1 ]
     [[ "$output" == *"bin/safe-commit.sh"* ]]
+}
+
+@test "safe-commit: rejects SOUL.md.bak (exact-file whitelist is strict)" {
+    STAGED_FILES="SOUL.md.bak" run bash "$SCRIPT" -m "m"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"SOUL.md.bak"* ]]
+}
+
+@test "safe-commit: rejects PROJECT.md~ backup file" {
+    STAGED_FILES="PROJECT.md~" run bash "$SCRIPT" -m "m"
+    [ "$status" -eq 1 ]
+}
+
+@test "safe-commit: rejects MEMORY.md.swp" {
+    STAGED_FILES="MEMORY.md.swp" run bash "$SCRIPT" -m "m"
+    [ "$status" -eq 1 ]
+}
+
+@test "safe-commit: rejects look-alike prefix (memoryfile has no slash)" {
+    STAGED_FILES="memoryfile.txt" run bash "$SCRIPT" -m "m"
+    [ "$status" -eq 1 ]
+}
+
+@test "safe-commit: handles whitelisted paths with spaces" {
+    STAGED_FILES="wiki/page with spaces.md" run bash "$SCRIPT" -m "m"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Committing"* ]]
+}
+
+@test "safe-commit: rejects non-whitelisted path with spaces as a single entry" {
+    STAGED_FILES="bad dir/file.sh" run bash "$SCRIPT" -m "m"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"bad dir/file.sh"* ]]
 }
