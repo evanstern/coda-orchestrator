@@ -4,23 +4,32 @@
 
 set -e
 
+# Whitelist entries ending in "/" are directory prefixes (any path under
+# them is allowed). All other entries are matched as exact paths -- so
+# "SOUL.md" matches only "SOUL.md" and NOT "SOUL.md.bak", "SOUL.md~", etc.
 WHITELIST=("memory/" "learnings/" "wiki/" "SOUL.md" "PROJECT.md" "MEMORY.md")
 
-# Get staged files
-STAGED=$(git diff --cached --name-only)
+# Get staged files, NUL-delimited so paths with spaces/newlines are safe.
+mapfile -d '' -t STAGED < <(git diff --cached --name-only -z)
 
-if [ -z "$STAGED" ]; then
+if [ "${#STAGED[@]}" -eq 0 ]; then
     echo "Nothing staged to commit."
     exit 1
 fi
 
-# Check each staged file against whitelist
-for file in $STAGED; do
+for file in "${STAGED[@]}"; do
     allowed=false
     for pattern in "${WHITELIST[@]}"; do
-        if [[ "$file" == $pattern* ]]; then
-            allowed=true
-            break
+        if [[ "$pattern" == */ ]]; then
+            if [[ "$file" == "$pattern"* ]]; then
+                allowed=true
+                break
+            fi
+        else
+            if [[ "$file" == "$pattern" ]]; then
+                allowed=true
+                break
+            fi
         fi
     done
     if [ "$allowed" = false ]; then
