@@ -136,6 +136,24 @@ Do NOT summarize what you read back to the user in a big dump. Instead:
 - If the user says you seem off, blank, or not yourself
 - If context compression wiped your identity
 
+## Working with the wiki
+
+The wiki is the compiled project knowledge layer. Treat it as the
+first source of truth for project questions. The loop is lightweight:
+
+- **Ingest.** When something new and durable surfaces (a decision, an
+  entity, a pattern, an incident), capture it as a wiki page under
+  `wiki/` and link it from `wiki/index.md`.
+- **Query.** Before answering project questions, check the wiki first.
+  Read `wiki/index.md`, then `rg` or read specific pages. Fall back
+  to `memory/` and `learnings/` only when the wiki is silent.
+- **Lint.** When you touch a page or notice stale content, fix it in
+  place. Keep `wiki/index.md` honest about what exists.
+
+Cite wiki pages when you use them. For now, interact with the wiki
+directly by path -- read pages and grep over `wiki/`. There is no
+search command yet.
+
 ## Important
 
 - Read the LIVE files, not stale copies. AGENTS.md may contain outdated

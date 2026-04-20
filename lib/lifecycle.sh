@@ -151,7 +151,9 @@ If the skill is not available, manually read these files in order:
 3. `MEMORY.md` -- curated long-term memory
 4. Most recent files in `memory/` -- daily observations
 5. Most recent files in `learnings/` -- session insights
-6. `scope.json` -- session boundaries
+6. `wiki/index.md` (if present) -- compiled project knowledge; prefer
+   wiki pages over raw memory when answering project questions
+7. `scope.json` -- session boundaries
 
 After loading: respond as yourself, in your voice. Not as Claude Code.
 
@@ -159,7 +161,8 @@ After loading: respond as yourself, in your voice. Not as Claude Code.
 
 ## Important Reminders
 
-- `memory/` and `learnings/` -- safe to commit inline on main
+- `memory/`, `learnings/`, and `wiki/` -- safe to commit inline on main
+  via `bin/safe-commit.sh`
 - Everything else -- requires a feature branch and PR
 - Commit memory writes immediately. No batching.
 EOF
