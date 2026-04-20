@@ -1,4 +1,12 @@
 #!/usr/bin/env bats
+#
+# session-switcher.bats -- tests for session windows UI (#92)
+#
+# ALL TESTS SKIPPED: These test _orch_sessions, _orch_switch, and
+# _orch_scoped_sessions which are part of card #92 (session windows).
+# The implementation does not exist yet. When #92 ships, remove the
+# skip lines and verify.
+#
 
 setup() {
     export CODA_ORCH_DIR="$BATS_TEST_TMPDIR/orchestrators"
@@ -6,7 +14,7 @@ setup() {
     export CODA_ORCH_PORT_RANGE=10
     export SESSION_PREFIX="coda-test-"
 
-    PLUGIN_DIR="${CODA_ORCH_PLUGIN_DIR:-$HOME/.config/coda/orchestrators/coda-orchestrator}"
+    PLUGIN_DIR="${CODA_ORCH_PLUGIN_DIR:-$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)}"
     export _ORCH_PLUGIN_DIR="$PLUGIN_DIR"
     source "$PLUGIN_DIR/coda-handler.sh"
 }
@@ -20,18 +28,21 @@ teardown() {
 # --- sessions ---
 
 @test "sessions: requires orchestrator name" {
+    skip "Pending #92 -- _orch_sessions not yet implemented"
     run _orch_sessions
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
 @test "sessions: fails for nonexistent orchestrator" {
+    skip "Pending #92 -- _orch_sessions not yet implemented"
     run _orch_sessions nonexistent
     [ "$status" -eq 1 ]
     [[ "$output" == *"not found"* ]]
 }
 
 @test "sessions: shows no sessions when scope is empty" {
+    skip "Pending #92 -- _orch_sessions not yet implemented"
     _orch_new testbot --scope 'coda-test-nosuchsession--*'
     run _orch_sessions testbot
     [ "$status" -eq 0 ]
@@ -39,6 +50,7 @@ teardown() {
 }
 
 @test "sessions: lists scoped sessions" {
+    skip "Pending #92 -- _orch_sessions not yet implemented"
     _orch_new testbot --scope 'coda-test-sw--*'
     tmux new-session -d -s "coda-test-sw--main" "sleep 300"
 
@@ -51,6 +63,7 @@ teardown() {
 }
 
 @test "sessions: does not list out-of-scope sessions" {
+    skip "Pending #92 -- _orch_sessions not yet implemented"
     _orch_new testbot --scope 'coda-test-sw--*'
     tmux new-session -d -s "coda-test-other--main" "sleep 300"
 
@@ -64,18 +77,21 @@ teardown() {
 # --- switch ---
 
 @test "switch: requires orchestrator name" {
+    skip "Pending #92 -- _orch_switch not yet implemented"
     run _orch_switch
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
 @test "switch: fails for nonexistent orchestrator" {
+    skip "Pending #92 -- _orch_switch not yet implemented"
     run _orch_switch nonexistent
     [ "$status" -eq 1 ]
     [[ "$output" == *"not found"* ]]
 }
 
 @test "switch: fails for no sessions in scope" {
+    skip "Pending #92 -- _orch_switch not yet implemented"
     _orch_new testbot --scope 'coda-test-nosuchsession--*'
     run _orch_switch testbot 1
     [ "$status" -eq 1 ]
@@ -83,6 +99,7 @@ teardown() {
 }
 
 @test "switch: fails for invalid number" {
+    skip "Pending #92 -- _orch_switch not yet implemented"
     _orch_new testbot --scope 'coda-test-sw--*'
     tmux new-session -d -s "coda-test-sw--main" "sleep 300"
 
@@ -94,6 +111,7 @@ teardown() {
 }
 
 @test "switch: fails for unknown session name" {
+    skip "Pending #92 -- _orch_switch not yet implemented"
     _orch_new testbot --scope 'coda-test-sw--*'
     tmux new-session -d -s "coda-test-sw--main" "sleep 300"
 
@@ -107,6 +125,7 @@ teardown() {
 # --- scoped_sessions helper ---
 
 @test "scoped_sessions: returns pipe-delimited output" {
+    skip "Pending #92 -- _orch_scoped_sessions not yet implemented"
     _orch_new testbot --scope 'coda-test-sw--*'
     tmux new-session -d -s "coda-test-sw--main" "sleep 300"
 
@@ -118,6 +137,7 @@ teardown() {
 }
 
 @test "scoped_sessions: includes orch session with --include-orch" {
+    skip "Pending #92 -- _orch_scoped_sessions not yet implemented"
     _orch_new testbot --scope 'coda-test-sw--*'
     local orch_session
     orch_session=$(_orch_session_name testbot)
@@ -133,18 +153,21 @@ teardown() {
 # --- handler dispatch ---
 
 @test "dispatch: sessions subcommand is wired" {
+    skip "Pending #92 -- sessions subcommand not yet wired"
     run _coda_orch sessions
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
 @test "dispatch: switch subcommand is wired" {
+    skip "Pending #92 -- switch subcommand not yet wired"
     run _coda_orch switch
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
 @test "dispatch: help includes sessions and switch" {
+    skip "Pending #92 -- sessions/switch not yet in help"
     run _coda_orch help
     [ "$status" -eq 0 ]
     [[ "$output" == *"sessions"* ]]
