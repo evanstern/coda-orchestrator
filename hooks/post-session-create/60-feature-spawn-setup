@@ -50,6 +50,22 @@ if [ -f "$dir/staged-brief.md" ]; then
     mv "$dir/staged-brief.md" "$worktree_dir/IMPLEMENT.md"
 fi
 
+# 2b. Persist orchestrator context so pre-feature-teardown can find the
+#     owning orchestrator without guessing. Shell-sourceable.
+card_id="${branch%%-*}"
+case "$card_id" in
+    ''|*[!0-9]*) card_id="" ;;
+esac
+
+{
+    printf 'CODA_ORCH_NAME=%q\n' "$orch_name"
+    printf 'CODA_ORCH_DIR=%q\n' "$dir"
+    printf 'CODA_FEATURE_BRANCH=%q\n' "$branch"
+    printf 'CODA_FEATURE_CARD=%q\n' "$card_id"
+    printf 'CODA_PROJECT_NAME=%q\n' "${CODA_PROJECT_NAME:-}"
+    printf 'CODA_WORKTREE_DIR=%q\n' "$worktree_dir"
+} > "$worktree_dir/.orch-meta"
+
 # 3. Prepend AGENTS.md with feature-session header.
 agents_header=$(cat <<'HEADER'
 # FEATURE SESSION
@@ -58,6 +74,39 @@ You are a feature implementation agent, NOT the orchestrator.
 Read IMPLEMENT.md for your task brief.
 When you receive "read @IMPLEMENT.md and execute", start immediately.
 Report "PR ready: <url>" when done.
+
+## Teardown report (required)
+
+Before the feature session ends, write a self-report to `TEARDOWN.md` at
+the worktree root. The pre-feature-teardown hook will deliver it to the
+orchestrator's persistent inbox. Use this template verbatim and fill in
+every section; use `- None` when a section has nothing to report.
+
+```markdown
+# Teardown report
+
+status: completed | partial | failed
+pr: <url or "none">
+
+## What got done
+- ...
+
+## What did not get done
+- ...
+
+## Decisions made
+- ...
+
+## Issues / surprises / workarounds
+- ...
+
+## Notes for the orchestrator
+- ...
+```
+
+If you do not write `TEARDOWN.md`, the teardown hook still delivers a
+minimal auto-generated report, but the orchestrator loses the implementation
+context only you have. Always write it.
 
 ---
 HEADER
@@ -72,10 +121,10 @@ else
     printf '%s\n' "$agents_header" > "$worktree_dir/AGENTS.md"
 fi
 
-# 4. Add IMPLEMENT.md / AGENTS.md to .gitignore if not already there.
+# 4. Add feature-session files to .gitignore if not already there.
 if [ ! -f "$worktree_dir/.gitignore" ] \
     || ! grep -q 'IMPLEMENT.md' "$worktree_dir/.gitignore" 2>/dev/null; then
-    printf '\n# Feature session files\nIMPLEMENT.md\nAGENTS.md\n*.feature-brief.md\n' \
+    printf '\n# Feature session files\nIMPLEMENT.md\nAGENTS.md\nTEARDOWN.md\n.orch-meta\n*.feature-brief.md\n' \
         >> "$worktree_dir/.gitignore"
 fi
 

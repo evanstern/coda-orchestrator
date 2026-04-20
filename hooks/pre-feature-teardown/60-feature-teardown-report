@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#
+# 60-feature-teardown-report -- persist a postmortem to the owning
+# orchestrator's inbox/ directory before the feature session is destroyed.
+#
+# Delivery is filesystem-only: no `coda orch send`, no HTTP. The
+# orchestrator does not need to be running. The report survives the
+# session teardown and stays grep-able under <orch_dir>/inbox/<branch>.md.
+#
+# The owning orchestrator is resolved from the worktree's `.orch-meta`
+# file (written by hooks/post-session-create/60-feature-spawn-setup). We
+# never guess. If the worktree has no .orch-meta, the hook exits 0
+# silently -- a non-orch feature teardown is not this hook's concern.
+#
+# Env (set by the coda CLI when firing the hook):
+#   CODA_FEATURE_BRANCH  -- feature branch name
+#   CODA_WORKTREE_DIR    -- absolute path to the feature worktree
+#   CODA_ORCH_NAME       -- orchestrator name (optional; preferred from .orch-meta)
+#   CODA_PROJECT_NAME    -- project name (optional)
+
+set -u
+
+worktree_dir="${CODA_WORKTREE_DIR:-}"
+branch="${CODA_FEATURE_BRANCH:-}"
+
+[ -n "$worktree_dir" ] || exit 0
+[ -d "$worktree_dir" ] || exit 0
+
+meta_file="$worktree_dir/.orch-meta"
+orch_name="${CODA_ORCH_NAME:-}"
+orch_dir=""
+card_id=""
+project_name="${CODA_PROJECT_NAME:-}"
+
+if [ -f "$meta_file" ]; then
+    # shellcheck disable=SC1090
+    . "$meta_file"
+    orch_name="${CODA_ORCH_NAME:-$orch_name}"
+    orch_dir="${CODA_ORCH_DIR:-}"
+    card_id="${CODA_FEATURE_CARD:-}"
+    project_name="${CODA_PROJECT_NAME:-$project_name}"
+    branch="${CODA_FEATURE_BRANCH:-$branch}"
+fi
+
+[ -n "$orch_name" ] || exit 0
+[ -n "$branch" ] || exit 0
+
+if [ -z "$orch_dir" ]; then
+    base_dir="${ORCH_BASE_DIR:-${CODA_ORCH_DIR:-$HOME/.config/coda/orchestrators}}"
+    orch_dir="$base_dir/$orch_name"
+fi
+
+if [ ! -d "$orch_dir" ]; then
+    echo "60-feature-teardown-report: orchestrator not found: $orch_name ($orch_dir)" >&2
+    exit 0
+fi
+
+PLUGIN_DIR="${_ORCH_PLUGIN_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+
+if [ ! -f "$PLUGIN_DIR/lib/teardown.sh" ]; then
+    echo "60-feature-teardown-report: lib/teardown.sh missing" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1091
+. "$PLUGIN_DIR/lib/teardown.sh"
+
+_orch_write_teardown_report \
+    "$orch_dir" "$branch" "$worktree_dir" "$card_id" "$project_name" \
+    > /dev/null
+
+exit 0
