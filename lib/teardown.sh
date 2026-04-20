@@ -115,21 +115,17 @@ _orch_write_teardown_report() {
 
     local pr_url="none"
     local head_sha=""
-    local body=""
+    local teardown_file=""
     local source="auto"
 
     if [ -n "$worktree_dir" ] && [ -d "$worktree_dir" ]; then
         head_sha=$(_orch_teardown_head_sha "$worktree_dir")
         pr_url=$(_orch_teardown_pr_url "$worktree_dir" "$branch")
 
-        if [ -f "$worktree_dir/TEARDOWN.md" ]; then
-            body=$(cat "$worktree_dir/TEARDOWN.md")
+        if [ -f "$worktree_dir/TEARDOWN.md" ] && [ -s "$worktree_dir/TEARDOWN.md" ]; then
+            teardown_file="$worktree_dir/TEARDOWN.md"
             source="self-report"
         fi
-    fi
-
-    if [ -z "$body" ]; then
-        body=$(_orch_teardown_auto_body)
     fi
 
     {
@@ -144,7 +140,11 @@ _orch_write_teardown_report() {
         printf '%s\n' "- time: $ts"
         printf '%s\n' "- source: $source"
         printf '\n---\n\n'
-        printf '%s\n' "$body"
+        if [ -n "$teardown_file" ]; then
+            cat "$teardown_file"
+        else
+            _orch_teardown_auto_body
+        fi
     } > "$out_file"
 
     echo "$out_file"

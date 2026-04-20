@@ -8,9 +8,13 @@
 # session teardown and stays grep-able under <orch_dir>/inbox/<branch>.md.
 #
 # The owning orchestrator is resolved from the worktree's `.orch-meta`
-# file (written by hooks/post-session-create/60-feature-spawn-setup). We
-# never guess. If the worktree has no .orch-meta, the hook exits 0
-# silently -- a non-orch feature teardown is not this hook's concern.
+# file (written by hooks/post-session-create/60-feature-spawn-setup) when
+# present, and otherwise falls back to `CODA_ORCH_NAME` from the
+# environment. If neither source provides an orchestrator name the hook
+# exits 0 silently -- a non-orch feature teardown is not this hook's concern.
+#
+# `.orch-meta` is parsed as plain KEY=VALUE pairs (not sourced) so a
+# compromised worktree cannot execute arbitrary shell during teardown.
 #
 # Env (set by the coda CLI when firing the hook):
 #   CODA_FEATURE_BRANCH  -- feature branch name
@@ -32,21 +36,47 @@ orch_dir=""
 card_id=""
 project_name="${CODA_PROJECT_NAME:-}"
 
+# Parse .orch-meta as plain KEY=VALUE. We deliberately do NOT source it:
+# the file sits inside the worktree and can be modified by anything with
+# write access there. Sourcing would execute arbitrary shell during
+# teardown. Only the five keys listed below are honored; everything else
+# is ignored. Single- and double-quoted values are unquoted.
+_orch_meta_get() {
+    local key="$1" file="$2"
+    local line val
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            "$key="*) val="${line#*=}" ;;
+            *) continue ;;
+        esac
+        case "$val" in
+            \"*\") val="${val#\"}"; val="${val%\"}" ;;
+            \'*\') val="${val#\'}"; val="${val%\'}" ;;
+        esac
+        printf '%s\n' "$val"
+        return 0
+    done < "$file"
+}
+
 if [ -f "$meta_file" ]; then
-    # shellcheck disable=SC1090
-    . "$meta_file"
-    orch_name="${CODA_ORCH_NAME:-$orch_name}"
-    orch_dir="${CODA_ORCH_DIR:-}"
-    card_id="${CODA_FEATURE_CARD:-}"
-    project_name="${CODA_PROJECT_NAME:-$project_name}"
-    branch="${CODA_FEATURE_BRANCH:-$branch}"
+    meta_orch_name=$(_orch_meta_get CODA_ORCH_NAME "$meta_file")
+    meta_orch_dir=$(_orch_meta_get CODA_ORCH_DIR "$meta_file")
+    meta_card_id=$(_orch_meta_get CODA_FEATURE_CARD "$meta_file")
+    meta_project_name=$(_orch_meta_get CODA_PROJECT_NAME "$meta_file")
+    meta_branch=$(_orch_meta_get CODA_FEATURE_BRANCH "$meta_file")
+
+    orch_name="${meta_orch_name:-$orch_name}"
+    orch_dir="${meta_orch_dir:-}"
+    card_id="${meta_card_id:-}"
+    project_name="${meta_project_name:-$project_name}"
+    branch="${meta_branch:-$branch}"
 fi
 
 [ -n "$orch_name" ] || exit 0
 [ -n "$branch" ] || exit 0
 
 if [ -z "$orch_dir" ]; then
-    base_dir="${ORCH_BASE_DIR:-${CODA_ORCH_DIR:-$HOME/.config/coda/orchestrators}}"
+    base_dir="${ORCH_BASE_DIR:-${CODA_ORCH_DIR:-${HOME:-}/.config/coda/orchestrators}}"
     orch_dir="$base_dir/$orch_name"
 fi
 

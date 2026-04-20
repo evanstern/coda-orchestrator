@@ -41,6 +41,12 @@ exit 0
 SS
     chmod +x "$STUB_BIN/ss"
 
+    cat > "$STUB_BIN/gh" <<'GH'
+#!/usr/bin/env bash
+exit 1
+GH
+    chmod +x "$STUB_BIN/gh"
+
     export PATH="$STUB_BIN:$PATH"
 
     source "$PLUGIN_DIR/lib/teardown.sh"
@@ -294,8 +300,7 @@ CODA_WORKTREE_DIR=$WORKTREE_DIR
 META
 
     echo "preexisting inbox content" > "$ORCH_CFG_DIR/inbox.md"
-    local sha_before
-    sha_before=$(sha1sum < "$ORCH_CFG_DIR/inbox.md")
+    cp "$ORCH_CFG_DIR/inbox.md" "$BATS_TEST_TMPDIR/inbox-before.md"
 
     export CODA_WORKTREE_DIR="$WORKTREE_DIR"
     export CODA_FEATURE_BRANCH="$BRANCH"
@@ -303,9 +308,8 @@ META
     run bash "$TEARDOWN_HOOK"
     [ "$status" -eq 0 ]
 
-    local sha_after
-    sha_after=$(sha1sum < "$ORCH_CFG_DIR/inbox.md")
-    [ "$sha_before" = "$sha_after" ]
+    run cmp -s "$BATS_TEST_TMPDIR/inbox-before.md" "$ORCH_CFG_DIR/inbox.md"
+    [ "$status" -eq 0 ]
 }
 
 @test "teardown hook: exits 0 when orchestrator dir no longer exists" {
@@ -322,5 +326,60 @@ META
     export CODA_FEATURE_BRANCH="$BRANCH"
 
     run bash "$TEARDOWN_HOOK"
+    [ "$status" -eq 0 ]
+}
+
+@test "teardown hook: does not execute code injected into .orch-meta" {
+    local canary="$BATS_TEST_TMPDIR/canary"
+    cat > "$WORKTREE_DIR/.orch-meta" <<META
+CODA_ORCH_NAME=$ORCH_NAME
+CODA_ORCH_DIR=$ORCH_CFG_DIR
+CODA_FEATURE_BRANCH=$BRANCH
+CODA_FEATURE_CARD=87
+CODA_PROJECT_NAME=coda-orchestrator
+CODA_WORKTREE_DIR=$WORKTREE_DIR
+\$(touch '$canary')
+\`touch '$canary'\`
+META
+
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+    export CODA_FEATURE_BRANCH="$BRANCH"
+
+    run bash "$TEARDOWN_HOOK"
+    [ "$status" -eq 0 ]
+
+    [ ! -e "$canary" ]
+    [ -f "$ORCH_CFG_DIR/inbox/${BRANCH}.md" ]
+}
+
+@test "teardown hook: preserves TEARDOWN.md body byte-for-byte" {
+    cat > "$WORKTREE_DIR/.orch-meta" <<META
+CODA_ORCH_NAME=$ORCH_NAME
+CODA_ORCH_DIR=$ORCH_CFG_DIR
+CODA_FEATURE_BRANCH=$BRANCH
+CODA_FEATURE_CARD=87
+CODA_PROJECT_NAME=coda-orchestrator
+CODA_WORKTREE_DIR=$WORKTREE_DIR
+META
+
+    printf 'line1\nline2\n\n\n' > "$WORKTREE_DIR/TEARDOWN.md"
+
+    export CODA_WORKTREE_DIR="$WORKTREE_DIR"
+    export CODA_FEATURE_BRANCH="$BRANCH"
+
+    run bash "$TEARDOWN_HOOK"
+    [ "$status" -eq 0 ]
+
+    local out="$ORCH_CFG_DIR/inbox/${BRANCH}.md"
+    local want="$BATS_TEST_TMPDIR/want-tail"
+    printf '\nline1\nline2\n\n\n' > "$want"
+
+    local out_bytes
+    out_bytes=$(wc -c < "$out")
+    local want_bytes
+    want_bytes=$(wc -c < "$want")
+    local start=$((out_bytes - want_bytes + 1))
+
+    run cmp -s "$want" <(tail -c +"$start" "$out")
     [ "$status" -eq 0 ]
 }

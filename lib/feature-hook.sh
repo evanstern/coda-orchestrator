@@ -73,12 +73,12 @@ _coda_feature_orch_hook() {
     esac
 
     {
-        printf 'CODA_ORCH_NAME=%q\n' "$orch_name"
-        printf 'CODA_ORCH_DIR=%q\n' "$dir"
-        printf 'CODA_FEATURE_BRANCH=%q\n' "$branch"
-        printf 'CODA_FEATURE_CARD=%q\n' "$card_id"
-        printf 'CODA_PROJECT_NAME=%q\n' "$project_name"
-        printf 'CODA_WORKTREE_DIR=%q\n' "$worktree_dir"
+        printf 'CODA_ORCH_NAME=%s\n' "$orch_name"
+        printf 'CODA_ORCH_DIR=%s\n' "$dir"
+        printf 'CODA_FEATURE_BRANCH=%s\n' "$branch"
+        printf 'CODA_FEATURE_CARD=%s\n' "$card_id"
+        printf 'CODA_PROJECT_NAME=%s\n' "$project_name"
+        printf 'CODA_WORKTREE_DIR=%s\n' "$worktree_dir"
     } > "$worktree_dir/.orch-meta"
 
     # 3. Prepend AGENTS.md with feature-session header
@@ -138,12 +138,22 @@ HEADER
         printf '%s\n' "$agents_header" > "$worktree_dir/AGENTS.md"
     fi
 
-    # 4. Add feature-session files to .gitignore if not already there
-    if [ ! -f "$worktree_dir/.gitignore" ] \
-        || ! grep -q 'IMPLEMENT.md' "$worktree_dir/.gitignore" 2>/dev/null; then
-        printf '\n# Feature session files\nIMPLEMENT.md\nAGENTS.md\nTEARDOWN.md\n.orch-meta\n*.feature-brief.md\n' \
-            >> "$worktree_dir/.gitignore"
-    fi
+    # 4. Add each feature-session file to .gitignore if not already there.
+    #    Checked per-entry so worktrees upgraded from an older version
+    #    (which only ignored IMPLEMENT.md / AGENTS.md) still pick up
+    #    TEARDOWN.md and .orch-meta.
+    local gitignore="$worktree_dir/.gitignore"
+    local entry
+    for entry in 'IMPLEMENT.md' 'AGENTS.md' 'TEARDOWN.md' '.orch-meta' '*.feature-brief.md'; do
+        if [ ! -f "$gitignore" ] \
+            || ! grep -Fxq "$entry" "$gitignore" 2>/dev/null; then
+            if [ ! -s "$gitignore" ] \
+                || ! grep -q '^# Feature session files$' "$gitignore" 2>/dev/null; then
+                printf '\n# Feature session files\n' >> "$gitignore"
+            fi
+            printf '%s\n' "$entry" >> "$gitignore"
+        fi
+    done
 
     # 5. Allocate a free port for opencode serve
     if ! command -v _orch_find_free_port >/dev/null 2>&1; then
