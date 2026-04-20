@@ -65,6 +65,22 @@ _coda_feature_orch_hook() {
         mv "$dir/staged-brief.md" "$worktree_dir/IMPLEMENT.md"
     fi
 
+    # 2b. Persist orchestrator context so pre-feature-teardown can resolve
+    #     the owning orchestrator without guessing.
+    local card_id="${branch%%-*}"
+    case "$card_id" in
+        ''|*[!0-9]*) card_id="" ;;
+    esac
+
+    {
+        printf 'CODA_ORCH_NAME=%s\n' "$orch_name"
+        printf 'CODA_ORCH_DIR=%s\n' "$dir"
+        printf 'CODA_FEATURE_BRANCH=%s\n' "$branch"
+        printf 'CODA_FEATURE_CARD=%s\n' "$card_id"
+        printf 'CODA_PROJECT_NAME=%s\n' "$project_name"
+        printf 'CODA_WORKTREE_DIR=%s\n' "$worktree_dir"
+    } > "$worktree_dir/.orch-meta"
+
     # 3. Prepend AGENTS.md with feature-session header
     local agents_header
     agents_header=$(cat <<'HEADER'
@@ -74,6 +90,39 @@ You are a feature implementation agent, NOT the orchestrator.
 Read IMPLEMENT.md for your task brief.
 When you receive "read @IMPLEMENT.md and execute", start immediately.
 Report "PR ready: <url>" when done.
+
+## Teardown report (required)
+
+Before the feature session ends, write a self-report to `TEARDOWN.md` at
+the worktree root. The pre-feature-teardown hook will deliver it to the
+orchestrator's persistent inbox. Use this template verbatim and fill in
+every section; use `- None` when a section has nothing to report.
+
+```markdown
+# Teardown report
+
+status: completed | partial | failed
+pr: <url or "none">
+
+## What got done
+- ...
+
+## What did not get done
+- ...
+
+## Decisions made
+- ...
+
+## Issues / surprises / workarounds
+- ...
+
+## Notes for the orchestrator
+- ...
+```
+
+If you do not write `TEARDOWN.md`, the teardown hook still delivers a
+minimal auto-generated report, but the orchestrator loses the implementation
+context only you have. Always write it.
 
 ---
 HEADER
@@ -89,12 +138,22 @@ HEADER
         printf '%s\n' "$agents_header" > "$worktree_dir/AGENTS.md"
     fi
 
-    # 4. Add IMPLEMENT.md/AGENTS.md to .gitignore if not already there
-    if [ ! -f "$worktree_dir/.gitignore" ] \
-        || ! grep -q 'IMPLEMENT.md' "$worktree_dir/.gitignore" 2>/dev/null; then
-        printf '\n# Feature session files\nIMPLEMENT.md\nAGENTS.md\n*.feature-brief.md\n' \
-            >> "$worktree_dir/.gitignore"
-    fi
+    # 4. Add each feature-session file to .gitignore if not already there.
+    #    Checked per-entry so worktrees upgraded from an older version
+    #    (which only ignored IMPLEMENT.md / AGENTS.md) still pick up
+    #    TEARDOWN.md and .orch-meta.
+    local gitignore="$worktree_dir/.gitignore"
+    local entry
+    for entry in 'IMPLEMENT.md' 'AGENTS.md' 'TEARDOWN.md' '.orch-meta' '*.feature-brief.md'; do
+        if [ ! -f "$gitignore" ] \
+            || ! grep -Fxq "$entry" "$gitignore" 2>/dev/null; then
+            if [ ! -s "$gitignore" ] \
+                || ! grep -q '^# Feature session files$' "$gitignore" 2>/dev/null; then
+                printf '\n# Feature session files\n' >> "$gitignore"
+            fi
+            printf '%s\n' "$entry" >> "$gitignore"
+        fi
+    done
 
     # 5. Allocate a free port for opencode serve
     if ! command -v _orch_find_free_port >/dev/null 2>&1; then
