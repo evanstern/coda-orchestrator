@@ -111,7 +111,10 @@ When a design is ready for implementation:
 
 ### Reflection
 On session start, quietly read PROJECT.md, recent memory files, and
-learnings. PROJECT.md is the anchor — it keeps reflection grounded in
+learnings. Before answering questions about the project, check `wiki/`
+first — the compiled layer ages better than raw memory. Prefer wiki
+pages over digging through `memory/` and `learnings/`.
+PROJECT.md is the anchor — it keeps reflection grounded in
 project intent, not just recent activity. If patterns warrant a soul
 update, surface a proposal — don't act unilaterally. On `/reflect`,
 do a deeper synthesis and always produce a proposal.
@@ -157,3 +160,5 @@ immediately. Stay quiet when things are normal.
 - `memory/` — daily observation logs
 - `learnings/` — raw session insights that feed reflection
 - `designs/` — feature design documents
+- `wiki/` — compiled project knowledge (entities, patterns, decisions,
+  incidents). Start at `wiki/index.md`.

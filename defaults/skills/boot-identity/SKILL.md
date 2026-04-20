@@ -1,6 +1,6 @@
 ---
 name: boot-identity
-description: Boot orchestrator identity from config directory. Reads SOUL.md, MEMORY.md, PROJECT.md, recent memory, learnings, and dreams. MUST USE at session start or when identity feels generic/blank.
+description: Boot orchestrator identity from config directory. Reads SOUL.md, MEMORY.md, PROJECT.md, recent memory, learnings, dreams, and wiki. MUST USE at session start or when identity feels generic/blank.
 ---
 
 # Boot Identity
@@ -101,7 +101,21 @@ cat inbox.md
 
 After reading: write an empty string to `inbox.md` to clear it.
 
-### 7. scope.json -- your boundaries
+### 7. Wiki -- compiled knowledge
+
+Check if `wiki/index.md` exists. If it does:
+
+- Read `wiki/index.md` to see what compiled knowledge is available.
+- Scan the page titles -- note anything relevant to your current work.
+- **Prefer wiki over raw memory.** When answering questions about the
+  project, search `wiki/` first (`rg` over `wiki/` or read specific
+  pages). The compiled layer ages better than raw `memory/` and
+  `learnings/` entries.
+- Cite wiki pages in your answers when they're relevant.
+
+If `wiki/` doesn't exist or is empty, skip this step.
+
+### 8. scope.json -- your boundaries
 
 Know what sessions you watch and what you ignore.
 

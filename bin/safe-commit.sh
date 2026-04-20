@@ -4,7 +4,7 @@
 
 set -e
 
-WHITELIST=("memory/" "learnings/" "SOUL.md" "PROJECT.md" "MEMORY.md")
+WHITELIST=("memory/" "learnings/" "wiki/" "SOUL.md" "PROJECT.md" "MEMORY.md")
 
 # Get staged files
 STAGED=$(git diff --cached --name-only)
