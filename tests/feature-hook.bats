@@ -41,6 +41,15 @@ exit 0
 OC
     chmod +x "$STUB_BIN/opencode"
 
+    # ss stub: reports no listeners so the hook's inline port-scan always
+    # picks the first candidate port. Keeps tests deterministic regardless
+    # of what's actually listening on the host.
+    cat > "$STUB_BIN/ss" <<'SS'
+#!/usr/bin/env bash
+exit 0
+SS
+    chmod +x "$STUB_BIN/ss"
+
     export PATH="$STUB_BIN:$PATH"
 
     source "$PLUGIN_DIR/lib/feature-hook.sh"
