@@ -1,6 +1,6 @@
 # Design: Overloaded `coda feature start` with `--orch` flag
 
-## Status: Draft
+## Status: Implemented (PR #26)
 ## Cards: #68 (umbrella), #59 (worktree base), #64 (naming convention)
 
 ## Problem
