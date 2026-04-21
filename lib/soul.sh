@@ -45,17 +45,21 @@ Be concise. Match the tone the user described. No filler.
 PROMPT
         )
 
-        local raw
+        local raw raw_status=0
         raw=$(
+            set -o pipefail
             opencode run --pure --format json "$prompt" 2>/dev/null \
                 | jq -r 'select(.type == "text") | .part.text // empty' 2>/dev/null
-        )
+        ) || raw_status=$?
+        if [ "$raw_status" -ne 0 ]; then
+            echo "Warning: opencode failed to generate SOUL; using template." >&2
+        fi
         # Strip any preamble before the heading
         result=$(printf '%s\n' "$raw" | sed -n '/^# SOUL\.md/,$p')
     fi
 
     if [ -n "$result" ]; then
-        echo "$result"
+        printf '%s\n' "$result"
     else
         cat <<EOF
 # SOUL.md — $name
@@ -96,8 +100,11 @@ _orch_edit() {
 
     local soul_file="$dir/SOUL.md"
 
-    if [ -n "${EDITOR:-}" ]; then
-        "$EDITOR" "$soul_file"
+    local editor_cmd="${VISUAL:-${EDITOR:-}}"
+
+    if [ -n "$editor_cmd" ]; then
+        # Use sh -c so EDITOR values with arguments (e.g. 'code --wait') work.
+        sh -c "$editor_cmd \"\$1\"" _ "$soul_file"
     else
         echo "$soul_file"
     fi
