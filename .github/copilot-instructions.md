@@ -2,49 +2,42 @@
 
 ## What This Repo Is
 
-This is an orchestrator config repo, not a typical code project.
-It contains configuration and personality files for "Zach" -- an AI
-orchestrator instance that acts as PM and Lead Architect for the
-coda-orchestrator project.
+This is the coda-orchestrator plugin. It provides the `coda orch` command
+family for managing persistent, memory-bearing AI orchestrator instances.
 
-The orchestrator plugin may install managed files into this repo's working
-tree, but they are gitignored and not tracked. Only config-layer files are
-tracked here.
+## Tracked Files
 
-## Tracked Files (config layer)
+Everything in this repo is tracked unless explicitly listed in .gitignore.
+Key areas:
 
-- `SOUL.md` -- Zach's identity and personality (two-zone: Core Identity + Personality)
-- `PROJECT.md` -- project vision, architecture, priorities
-- `MEMORY.md` -- curated learnings
-- `memory/` -- daily session logs
-- `learnings/` -- raw session insights
-- `designs/` -- feature design documents
-- `scope.json` -- session watch/ignore patterns
-- `opencode.json` -- opencode configuration
-- `lib/spawn.sh` -- spawn functionality (tracked)
-- `tests/` -- test files for tracked functionality
-
-## Intentionally Gitignored (never flag as missing)
-
-These files exist on disk but are NOT tracked by git:
-- `coda-handler.sh` -- plugin entrypoint (managed by plugin install)
-- `lib/lifecycle.sh`, `lib/observe.sh`, `lib/send.sh`, `lib/soul.sh`, `lib/ui.sh` -- plugin code
+- `coda-handler.sh` -- plugin entrypoint (command dispatcher)
 - `plugin.json` -- plugin manifest
-- `hooks/` -- lifecycle hooks
-- `defaults/` -- default templates (except SOUL.md.tmpl which is tracked)
-- `tests/lifecycle.bats` -- plugin tests
-- `AGENTS.md` -- instance-level operating instructions (gitignored by design)
-- `IMPLEMENT.md` -- feature session briefs (gitignored by design)
-- `*.feature-brief.md` -- scratch files
-- `port` -- runtime state
+- `AGENTS.md` -- instance-level operating instructions
+- `lib/` -- all modules: lifecycle, soul, send, spawn, inbox, inbox-status,
+  prune, status, shell-init, feature-hook
+- `hooks/` -- lifecycle hooks (post-session-create)
+- `tests/` -- bats test files
+- `designs/` -- feature design documents
+- `defaults/` -- templates (SOUL.md.tmpl, PERSONALITY.md.tmpl, scope.json.tmpl)
+  and skills (boot-identity, triage-work)
+- `bin/` -- utility scripts (safe-commit.sh)
+- Core config: `SOUL.md`, `PROJECT.md`, `MEMORY.md`, `opencode.json`,
+  `scope.json`, `README.md`
+- `memory/`, `learnings/`, `dreams/` -- observation and reflection logs
 
-Do NOT flag any of the above as missing or suggest adding them.
+## Gitignored (do NOT flag as missing)
+
+- `node_modules/`, swap files (*.swp, *.swo, *~), `.DS_Store`
+- `port` -- runtime state file (written by `coda orch start`)
+- `IMPLEMENT.md` -- ephemeral feature session briefs
+- `*.feature-brief.md` -- scratch planning files
 
 ## SOUL.md Two-Zone Convention
 
 SOUL.md has two zones:
 - **Core Identity** -- locked, only the user modifies this
-- **Personality** -- evolves through `/reflect` proposals, approved by user, committed via branch+PR
+- **Personality** -- evolves through `/reflect` proposals, approved by user,
+  committed via branch+PR
 
 Changes to SOUL.md always require a branch + PR. Never commit directly to main.
 

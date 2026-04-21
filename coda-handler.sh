@@ -12,7 +12,7 @@ ORCH_PORT_RANGE="${CODA_ORCH_PORT_RANGE:-20}"
 
 # Source library modules. prune is sourced before lifecycle so
 # _orch_start can reference _orch_prune_dir.
-for _orch_mod in prune lifecycle soul observe send spawn inbox; do
+for _orch_mod in prune lifecycle soul send spawn inbox; do
     if [ -f "$_ORCH_PLUGIN_DIR/lib/${_orch_mod}.sh" ]; then
         # shellcheck source=/dev/null
         source "$_ORCH_PLUGIN_DIR/lib/${_orch_mod}.sh"
