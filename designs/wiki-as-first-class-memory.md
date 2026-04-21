@@ -1,6 +1,6 @@
 # Design: Wiki as first-class memory
 
-**Status:** Draft for review
+**Status:** Partially Implemented (PR #35, cards #104-106)
 **Repo:** coda-orchestrator (soul plugin)
 **Cards:** TBD (proposed in this doc)
 

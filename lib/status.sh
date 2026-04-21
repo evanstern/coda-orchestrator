@@ -8,8 +8,7 @@
 # in an ASCII tree, annotating each session with its PR status and listing the
 # project's active focus cards on the final branch of each subtree.
 #
-# Sourced by lib/spawn.sh so this function definition wins over the legacy
-# implementation in lib/observe.sh (which is loaded earlier by coda-handler.sh).
+# Sourced by lib/spawn.sh to provide tree-view status output.
 #
 
 # --- helpers ------------------------------------------------------------------

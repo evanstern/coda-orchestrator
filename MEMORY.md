@@ -1,3 +1,3 @@
 # Memory — coda-orchestrator
 
-No observations yet.
+See memory/ for daily observations.
