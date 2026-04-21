@@ -27,12 +27,22 @@ AGENTS.md      — operating instructions for the agent
 
 ## Current Priorities
 
-1. **SOUL.md rewrite** — establish the PM/architect role and section
-   schema (in progress)
-2. **Soul-writer skill** (#29) — automate SOUL.md creation for new
-   orchestrator instances
-3. **Evolving personality system** (#30) — make the orchestrator's
-   personality grow through accumulated experience
+1. **#90 Window milestone** (P1) — session windows (#92), attach/watch
+   (#93), status-line (#94)
+2. **#79 Monorepo path fix** (P1) — update orch tooling for
+   personalities monorepo layout
+3. **#85 Question/answer loop** (P2) — fill gaps via interactive Q&A
+
+## Shipped
+
+- **#29 Soul-writer skill** — SOUL.md template + generation
+- **#30 Evolving personality** — reflection, dreams, personality
+  islands
+- **#76 Session pruning** — prune primitives for opencode serve (PR #29)
+- **#77 Automated PR lifecycle** — Copilot review loop
+- **#87 Feature session teardown** — self-report, postmortem, inbox
+  delivery (PR #36)
+- **#104-106 Wiki** — first-class memory protocol (PR #35)
 
 ## Conventions
 

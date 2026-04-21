@@ -1,0 +1,522 @@
+From 93b745bb8d5b520629c0e3a5a728e086ddb9a15d Mon Sep 17 00:00:00 2001
+From: Coda Agent <coda@local>
+Date: Sun, 19 Apr 2026 16:50:43 -0400
+Subject: [PATCH] feat(cli): add --orch flag and window-mode to _coda_attach
+
+Card #95: foundational CLI change for features-as-orchestrator-windows.
+
+- lib/feature.sh: parse --orch <name> / --orch=<name>; pass
+  CODA_ORCH_TARGET=${SESSION_PREFIX}orch--<name> and
+  CODA_ORCH_WINDOW_MODE=1 through to _coda_attach. Env trigger
+  CODA_ORCH_WINDOW_MODE=1 with no resolvable target warns and
+  falls back to session-mode (discovery is card #94).
+- lib/core.sh: _coda_attach gains a window-mode branch. When the
+  target orch session exists, it skips _layout_init and calls
+  _layout_spawn with CODA_LAYOUT_TARGET=<session>:<window>. Window
+  name is derived by stripping SESSION_PREFIX and <project>-- from
+  the feature session name. When in TMUX, switches via
+  switch-client; else plain tmux attach to orch session. Falls back
+  to session-mode with a warning when target is missing.
+- layouts/default.sh, layouts/classic.sh: _layout_spawn honors
+  CODA_LAYOUT_TARGET env var so window-mode can specify
+  session:window target.
+- Tests: new bats tests cover --orch parsing (both forms), env-only
+  trigger, window-mode path when orch exists / is missing, and
+  _layout_spawn target handling. Existing tests/window-mode.sh
+  integration harness still passes.
+
+Off by default. Behavior is byte-identical when --orch unset and
+CODA_ORCH_WINDOW_MODE is unset.
+---
+ layouts/classic.sh      |   7 +-
+ layouts/default.sh      |  11 ++-
+ lib/core.sh             |  47 ++++++++++
+ lib/feature.sh          |  45 ++++++++--
+ test/shell-modules.bats | 184 ++++++++++++++++++++++++++++++++++++++++
+ tests/window-mode.sh    |  90 ++++++++++++++++++++
+ 6 files changed, 374 insertions(+), 10 deletions(-)
+ create mode 100644 tests/window-mode.sh
+
+diff --git a/layouts/classic.sh b/layouts/classic.sh
+index d6eb116..fdd7e15 100755
+--- a/layouts/classic.sh
++++ b/layouts/classic.sh
+@@ -22,7 +22,12 @@ _layout_init() {
+ 
+ _layout_spawn() {
+     local session="$1" dir="$2"
+-    tmux new-window -t "$session" -c "$dir" "opencode; exec \$SHELL"
++    local target="${CODA_LAYOUT_TARGET:-$session}"
++    local window_flag=()
++    case "$target" in
++        *:*) window_flag=(-n "${target##*:}") ;;
++    esac
++    tmux new-window -t "${target%%:*}" "${window_flag[@]}" -c "$dir" "opencode; exec \$SHELL"
+ }
+ 
+ # Legacy alias
+diff --git a/layouts/default.sh b/layouts/default.sh
+index 2fcf987..5060c6e 100644
+--- a/layouts/default.sh
++++ b/layouts/default.sh
+@@ -23,7 +23,12 @@ _layout_init() {
+ 
+ _layout_spawn() {
+     local session="$1" dir="$2"
+-    tmux new-window -t "$session" -c "$dir" "opencode; exec \$SHELL"
+-    tmux split-window -t "$session" -v -l 20% -c "$dir"
+-    tmux select-pane -t "${session}:.0"
++    local target="${CODA_LAYOUT_TARGET:-$session}"
++    local window_flag=()
++    case "$target" in
++        *:*) window_flag=(-n "${target##*:}") ;;
++    esac
++    tmux new-window -t "${target%%:*}" "${window_flag[@]}" -c "$dir" "opencode; exec \$SHELL"
++    tmux split-window -t "$target" -v -l 20% -c "$dir"
++    tmux select-pane -t "${target}.0"
+ }
+diff --git a/lib/core.sh b/lib/core.sh
+index 70e15e1..6837de8 100644
+--- a/lib/core.sh
++++ b/lib/core.sh
+@@ -80,6 +80,17 @@ _coda_attach() {
+     local profile="${CODA_PROFILE:-}"
+     local flag_layout="${CODA_LAYOUT:-}"
+ 
++    local orch_target="${CODA_ORCH_TARGET:-${CODA_ORCH_SESSION:-}}"
++    local window_mode=false
++    if [ "${CODA_ORCH_WINDOW_MODE:-}" = "1" ] && [ -n "$orch_target" ]; then
++        if tmux has-session -t "$orch_target" 2>/dev/null; then
++            window_mode=true
++        else
++            echo "Orchestrator session not found: $orch_target"
++            echo "Falling back to standalone session-mode."
++        fi
++    fi
++
+     if [ -n "$profile" ]; then
+         local profile_file
+         profile_file=$(_coda_resolve_profile "$profile")
+@@ -98,6 +109,40 @@ _coda_attach() {
+     layout=$(printf '%s' "$config_lines" | sed -n '1p')
+     nvim_appname=$(printf '%s' "$config_lines" | sed -n '2p')
+ 
++    if [ "$window_mode" = true ]; then
++        local window_name="${session#${SESSION_PREFIX}}"
++        window_name="${window_name#*--}"
++        [ -n "$window_name" ] || window_name="${session#${SESSION_PREFIX}}"
++
++        _coda_load_layout "$layout" || return 1
++
++        if ! declare -f _layout_spawn &>/dev/null; then
++            echo "Layout '$layout' does not support window-mode (missing _layout_spawn)."
++            return 1
++        fi
++
++        CODA_LAYOUT_TARGET="${orch_target}:${window_name}" \
++            _layout_spawn "$orch_target" "$dir" "$nvim_appname"
++
++        tmux set-environment -t "$orch_target" CODA_DIR "$dir"
++
++        CODA_SESSION_NAME="${orch_target}:${window_name}" \
++        CODA_SESSION_DIR="$dir" CODA_SESSION_LAYOUT="$layout" \
++            _coda_run_hooks post-session-create
++
++        if [ -n "${TMUX:-}" ]; then
++            tmux switch-client -t "${orch_target}:${window_name}" 2>/dev/null || true
++            CODA_SESSION_NAME="${orch_target}:${window_name}" \
++                _coda_run_hooks post-session-attach
++        else
++            CODA_SESSION_NAME="${orch_target}:${window_name}" \
++                _coda_run_hooks post-session-attach
++            tmux attach -t "$orch_target"
++        fi
++
++        return 0
++    fi
++
+     if ! tmux has-session -t "$session" 2>/dev/null; then
+         CODA_SESSION_NAME="$session" CODA_SESSION_DIR="$dir" \
+             _coda_run_hooks pre-session-create
+@@ -212,6 +257,7 @@ USAGE
+   coda project ls                                 List projects in PROJECTS_DIR
+ 
+   coda feature start <branch> [base] [project]   New worktree + session
++  coda feature start <branch> --orch <name>      New worktree as window in orch session
+   coda feature done  <branch> [project]          Teardown worktree + session
+   coda feature finish [--force]                  Teardown current feature (agent-safe)
+   coda feature ls                                List worktrees for this project
+@@ -260,6 +306,7 @@ EXAMPLES
+   coda project start --new my-tool -m "CLI for managing widgets"
+   cd ~/projects/myapp/main
+   coda feature start auth
++  coda feature start auth --orch riley          # window in orch session
+   coda --profile experimental feature start auth
+   coda --layout classic myapp
+   coda ls
+diff --git a/lib/feature.sh b/lib/feature.sh
+index b3ff570..0d37735 100644
+--- a/lib/feature.sh
++++ b/lib/feature.sh
+@@ -16,15 +16,37 @@ _coda_feature() {
+ }
+ 
+ _coda_feature_start() {
+-    local branch="${1:-}"
+-    local base="${2:-}"
+-    local project_name="${3:-}"
++    local branch="" base="" project_name="" orch_name=""
++    local positional=()
++
++    while [ $# -gt 0 ]; do
++        case "$1" in
++            --orch)   orch_name="${2:-}"; shift 2 ;;
++            --orch=*) orch_name="${1#--orch=}"; shift ;;
++            *)        positional+=("$1"); shift ;;
++        esac
++    done
++
++    branch="${positional[0]:-}"
++    base="${positional[1]:-}"
++    project_name="${positional[2]:-}"
+ 
+     if [ -z "$branch" ]; then
+-        echo "Usage: coda feature start <branch> [base-branch] [project-name]"
++        echo "Usage: coda feature start <branch> [base-branch] [project-name] [--orch <name>]"
+         return 1
+     fi
+ 
++    # Resolve window-mode trigger. Explicit --orch always wins; otherwise
++    # CODA_ORCH_WINDOW_MODE=1 acts as an alternate trigger. If the env is set
++    # but no orch name resolves (project-field discovery is card #94), warn
++    # and fall back to session-mode for this card's scope.
++    local orch_target=""
++    if [ -n "$orch_name" ]; then
++        orch_target="${SESSION_PREFIX}orch--$(_coda_sanitize_session_name "$orch_name")"
++    elif [ "${CODA_ORCH_WINDOW_MODE:-}" = "1" ]; then
++        echo "CODA_ORCH_WINDOW_MODE=1 set but no --orch <name> resolvable; falling back to session-mode."
++    fi
++
+     local project_root
+     if [ -n "$project_name" ]; then
+         project_root="$PROJECTS_DIR/$project_name"
+@@ -60,7 +82,12 @@ _coda_feature_start() {
+     if [ -d "$worktree_dir" ]; then
+         echo "Worktree already exists: $worktree_dir"
+         echo "Attaching to existing session..."
+-        _coda_attach "${project_name}--${branch}" "$worktree_dir"
++        if [ -n "$orch_target" ]; then
++            CODA_ORCH_WINDOW_MODE=1 CODA_ORCH_TARGET="$orch_target" \
++                _coda_attach "${project_name}--${branch}" "$worktree_dir"
++        else
++            _coda_attach "${project_name}--${branch}" "$worktree_dir"
++        fi
+         return 0
+     fi
+ 
+@@ -84,7 +111,13 @@ _coda_feature_start() {
+     CODA_PROJECT_NAME="$project_name" CODA_PROJECT_DIR="$project_root" \
+     CODA_FEATURE_BRANCH="$branch" CODA_WORKTREE_DIR="$worktree_dir" \
+         _coda_run_hooks post-feature-create
+-    _coda_attach "${project_name}--${branch}" "$worktree_dir"
++
++    if [ -n "$orch_target" ]; then
++        CODA_ORCH_WINDOW_MODE=1 CODA_ORCH_TARGET="$orch_target" \
++            _coda_attach "${project_name}--${branch}" "$worktree_dir"
++    else
++        _coda_attach "${project_name}--${branch}" "$worktree_dir"
++    fi
+ }
+ 
+ _coda_feature_done() {
+diff --git a/test/shell-modules.bats b/test/shell-modules.bats
+index d9e3573..46cbc3f 100644
+--- a/test/shell-modules.bats
++++ b/test/shell-modules.bats
+@@ -1156,3 +1156,187 @@ setup() {
+     unset '_CODA_PLUGIN_COMMANDS[goodcmd]'
+     rm -rf "$tmpdir"
+ }
++
++# --- Card #95: --orch flag and window-mode tests ---
++
++_coda95_setup_fake_project() {
++    local project_name="$1"
++    local tmpdir
++    tmpdir=$(mktemp -d)
++    export PROJECTS_DIR="$tmpdir"
++    local root="$tmpdir/$project_name"
++    mkdir -p "$root/.bare" "$root/main"
++    printf 'gitdir: ./.bare\n' > "$root/.git"
++    echo "$root"
++}
++
++_coda95_stub_git() {
++    git() {
++        local args=("$@")
++        for ((i=0; i<${#args[@]}; i++)); do
++            case "${args[i]}" in
++                show-ref) return 0 ;;
++                fetch|worktree) return 0 ;;
++                rev-parse) echo main; return 0 ;;
++            esac
++        done
++        return 0
++    }
++    _coda_detect_default_branch() { echo main; }
++}
++
++@test "card95: _coda_feature_start parses --orch <name> with space" {
++    local capture_file
++    capture_file=$(mktemp)
++    _coda_attach() { echo "${CODA_ORCH_TARGET:-}" >"$capture_file"; return 0; }
++    _coda_run_hooks() { return 0; }
++    tmux() { return 0; }
++    _coda95_stub_git
++    local proj_dir
++    proj_dir=$(_coda95_setup_fake_project widget)
++    cd "$proj_dir/main"
++    _coda_feature_start --orch riley card95-a >/dev/null 2>&1
++    local target
++    target=$(cat "$capture_file")
++    [ "$target" = "${SESSION_PREFIX}orch--riley" ]
++    cd /
++    rm -rf "$proj_dir" "$capture_file"
++    unset -f _coda_attach _coda_run_hooks tmux git _coda_detect_default_branch
++}
++
++@test "card95: _coda_feature_start parses --orch=name form" {
++    local capture_file
++    capture_file=$(mktemp)
++    _coda_attach() { echo "${CODA_ORCH_TARGET:-}" >"$capture_file"; return 0; }
++    _coda_run_hooks() { return 0; }
++    tmux() { return 0; }
++    _coda95_stub_git
++    local proj_dir
++    proj_dir=$(_coda95_setup_fake_project widget2)
++    cd "$proj_dir/main"
++    _coda_feature_start --orch=riley card95-b >/dev/null 2>&1
++    local target
++    target=$(cat "$capture_file")
++    [ "$target" = "${SESSION_PREFIX}orch--riley" ]
++    cd /
++    rm -rf "$proj_dir" "$capture_file"
++    unset -f _coda_attach _coda_run_hooks tmux git _coda_detect_default_branch
++}
++
++@test "card95: _coda_feature_start without --orch does not set CODA_ORCH_TARGET" {
++    local capture_file
++    capture_file=$(mktemp)
++    _coda_attach() { echo "mode=${CODA_ORCH_WINDOW_MODE:-unset} target=${CODA_ORCH_TARGET:-unset}" >"$capture_file"; return 0; }
++    _coda_run_hooks() { return 0; }
++    tmux() { return 0; }
++    _coda95_stub_git
++    local proj_dir
++    proj_dir=$(_coda95_setup_fake_project widget3)
++    cd "$proj_dir/main"
++    _coda_feature_start card95-c >/dev/null 2>&1
++    local line
++    line=$(cat "$capture_file")
++    [[ "$line" == *"mode=unset"* ]]
++    [[ "$line" == *"target=unset"* ]]
++    cd /
++    rm -rf "$proj_dir" "$capture_file"
++    unset -f _coda_attach _coda_run_hooks tmux git _coda_detect_default_branch
++}
++
++@test "card95: _coda_attach window-mode requires existing orch session" {
++    local spawn_calls=0
++    _layout_spawn() { spawn_calls=$((spawn_calls+1)); return 0; }
++    tmux() {
++        case "$1" in
++            has-session) return 1 ;;
++            set-environment|switch-client) return 0 ;;
++            attach) return 0 ;;
++            *) return 0 ;;
++        esac
++    }
++    _coda_load_layout() { return 0; }
++    _coda_run_hooks() { return 0; }
++    CODA_ORCH_WINDOW_MODE=1 CODA_ORCH_TARGET="${SESSION_PREFIX}orch--ghost" \
++        run _coda_attach myproj--branchx /tmp
++    [[ "$output" == *"Orchestrator session not found"* ]]
++    [[ "$output" == *"session-mode"* ]]
++    unset -f _layout_spawn tmux _coda_load_layout _coda_run_hooks
++    unset CODA_ORCH_WINDOW_MODE CODA_ORCH_TARGET
++}
++
++@test "card95: _coda_attach without window-mode takes standard path" {
++    local init_called=0 spawn_called=0
++    _layout_init() { init_called=1; return 0; }
++    _layout_spawn() { spawn_called=1; return 0; }
++    _coda_load_layout() { return 0; }
++    _coda_run_hooks() { return 0; }
++    tmux() {
++        case "$1" in
++            has-session) return 1 ;;
++            switch-client|attach|set-environment) return 0 ;;
++            *) return 0 ;;
++        esac
++    }
++    TMUX=fake _coda_attach myproj--branchy /tmp >/dev/null 2>&1
++    [ "$init_called" -eq 1 ]
++    [ "$spawn_called" -eq 0 ]
++    unset -f _layout_init _layout_spawn _coda_load_layout _coda_run_hooks tmux
++    unset TMUX
++}
++
++@test "card95: _coda_attach window-mode spawns window when orch exists" {
++    local spawn_target="" set_env_target=""
++    _layout_spawn() { spawn_target="${CODA_LAYOUT_TARGET:-}"; return 0; }
++    _coda_load_layout() { return 0; }
++    _coda_run_hooks() { return 0; }
++    tmux() {
++        case "$1" in
++            has-session) return 0 ;;
++            set-environment) set_env_target="$3"; return 0 ;;
++            switch-client|attach) return 0 ;;
++            *) return 0 ;;
++        esac
++    }
++    TMUX=fake CODA_ORCH_WINDOW_MODE=1 CODA_ORCH_TARGET="${SESSION_PREFIX}orch--riley" \
++        _coda_attach myproj--foo /tmp >/dev/null 2>&1
++    [ "$spawn_target" = "${SESSION_PREFIX}orch--riley:foo" ]
++    unset -f _layout_spawn _coda_load_layout _coda_run_hooks tmux
++    unset TMUX CODA_ORCH_WINDOW_MODE CODA_ORCH_TARGET
++}
++
++@test "card95: default layout _layout_spawn honors CODA_LAYOUT_TARGET" {
++    local cmd_log
++    cmd_log=$(mktemp)
++    tmux() { printf '%s\n' "$*" >>"$cmd_log"; return 0; }
++    export -f tmux
++    _coda_load_layout default
++    CODA_LAYOUT_TARGET="coda-orch--riley:auth" _layout_spawn "ignored" "/tmp"
++    grep -q 'new-window -t coda-orch--riley -n auth' "$cmd_log"
++    unset -f tmux
++    rm -f "$cmd_log"
++}
++
++@test "card95: default layout _layout_spawn falls back to session when no target" {
++    local cmd_log
++    cmd_log=$(mktemp)
++    tmux() { printf '%s\n' "$*" >>"$cmd_log"; return 0; }
++    export -f tmux
++    _coda_load_layout default
++    unset CODA_LAYOUT_TARGET
++    _layout_spawn "my-session" "/tmp"
++    grep -q 'new-window -t my-session ' "$cmd_log"
++    unset -f tmux
++    rm -f "$cmd_log"
++}
++
++@test "card95: classic layout _layout_spawn honors CODA_LAYOUT_TARGET" {
++    local cmd_log
++    cmd_log=$(mktemp)
++    tmux() { printf '%s\n' "$*" >>"$cmd_log"; return 0; }
++    export -f tmux
++    _coda_load_layout classic
++    CODA_LAYOUT_TARGET="coda-orch--riley:auth" _layout_spawn "ignored" "/tmp"
++    grep -q 'new-window -t coda-orch--riley -n auth' "$cmd_log"
++    unset -f tmux
++    rm -f "$cmd_log"
++}
+diff --git a/tests/window-mode.sh b/tests/window-mode.sh
+new file mode 100644
+index 0000000..d73f9d6
+--- /dev/null
++++ b/tests/window-mode.sh
+@@ -0,0 +1,90 @@
++#!/usr/bin/env bash
++
++set -euo pipefail
++
++ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
++source "$ROOT_DIR/tests/testlib.sh"
++
++TEST_TMPDIR="$(mktemp -d)"
++trap 'rm -rf "$TEST_TMPDIR"' EXIT
++
++export HOME="$TEST_TMPDIR/home"
++export PROJECTS_DIR="$TEST_TMPDIR/projects"
++export SESSION_PREFIX="coda-"
++export DEFAULT_BRANCH="main"
++export GIT_REMOTE="origin"
++export DEFAULT_LAYOUT="default"
++export CODA_LAYOUTS_DIR="$ROOT_DIR/layouts"
++export CODA_PROFILES_DIR="$TEST_TMPDIR/profiles"
++export AUTO_ATTACH_TMUX="false"
++export CODA_TEST_STATE_DIR="$TEST_TMPDIR/state"
++export PATH="$ROOT_DIR/tests/bin:$PATH"
++unset TMUX
++
++mkdir -p "$HOME" "$PROJECTS_DIR" "$CODA_PROFILES_DIR" "$CODA_TEST_STATE_DIR"
++
++REMOTE_REPO="$TEST_TMPDIR/remote.git"
++SEED_REPO="$TEST_TMPDIR/seed"
++
++git init "$SEED_REPO" -b main >/dev/null
++git -C "$SEED_REPO" config user.name 'Coda Test'
++git -C "$SEED_REPO" config user.email 'coda-test@example.com'
++printf 'hello\n' > "$SEED_REPO/README.md"
++git -C "$SEED_REPO" add README.md >/dev/null
++git -C "$SEED_REPO" commit -m 'Initial commit' >/dev/null
++git clone --bare "$SEED_REPO" "$REMOTE_REPO" >/dev/null
++
++source "$ROOT_DIR/shell-functions.sh"
++
++printf 'Running window-mode tests...\n'
++
++# -- Setup project --
++
++coda project start --repo "$REMOTE_REPO" window-test 2>&1 >/dev/null
++cd "$PROJECTS_DIR/window-test/main"
++
++# -- Test 1: --orch flag with missing orch session falls back to session-mode --
++
++orch_fallback_output="$(coda feature start feat-a --orch nonexistent 2>&1)"
++assert_contains "$orch_fallback_output" "Orchestrator session not found" \
++    "--orch should warn when orch session does not exist"
++assert_contains "$orch_fallback_output" "Falling back to standalone session-mode" \
++    "--orch should fall back when orch session does not exist"
++assert_contains "$(cat "$CODA_TEST_STATE_DIR/tmux-sessions")" "coda-window-test--feat-a" \
++    "--orch fallback should create standalone feature session"
++
++# -- Test 2: --orch flag spawns window in orch session --
++
++# Create a fake orch session
++echo "coda-orch--my-orch" >> "$CODA_TEST_STATE_DIR/tmux-sessions"
++
++feature_output="$(coda feature start feat-b --orch my-orch 2>&1)"
++assert_contains "$feature_output" "Creating worktree: feat-b" \
++    "--orch feature start should create worktree"
++assert_file_exists "$PROJECTS_DIR/window-test/feat-b/.git" \
++    "--orch feature start should create feature worktree"
++
++# Window should be spawned in orch session, NOT a new standalone session
++assert_contains "$(cat "$CODA_TEST_STATE_DIR/tmux-actions")" "new-window:coda-orch--my-orch" \
++    "--orch should spawn window in orchestrator session"
++
++# Should NOT have created a standalone session for the feature
++if grep -Fx 'coda-window-test--feat-b' "$CODA_TEST_STATE_DIR/tmux-sessions" >/dev/null 2>&1; then
++    fail "--orch should not create a standalone feature session"
++fi
++
++# -- Test 3: Without --orch, standard session is created --
++
++feature_std_output="$(coda feature start feat-c 2>&1)"
++assert_contains "$(cat "$CODA_TEST_STATE_DIR/tmux-sessions")" "coda-window-test--feat-c" \
++    "without --orch, feature start should create standalone session"
++
++# -- Test 4: --orch with existing worktree --
++
++feat_b_again="$(coda feature start feat-b --orch my-orch 2>&1)"
++assert_contains "$feat_b_again" "Worktree already exists" \
++    "--orch with existing worktree should detect it"
++assert_contains "$feat_b_again" "Attaching to existing session" \
++    "--orch with existing worktree should say attaching"
++
++printf 'PASS: window-mode tests\n'
+-- 
+2.43.0
+

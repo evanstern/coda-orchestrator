@@ -1,7 +1,7 @@
 # Design: Session Pruning for opencode serve Instances
 
 **Card:** #76
-**Status:** Draft
+**Status:** Implemented (PR #29)
 **Repos:** coda-orchestrator (pruning primitives), coda (feature done wiring)
 
 ## Problem
