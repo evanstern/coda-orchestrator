@@ -39,7 +39,7 @@ AGENTS.md      — operating instructions for the agent
 - **#30 Evolving personality** — reflection, dreams, personality
   islands (PR #26)
 - **#76 Session pruning** — prune primitives for opencode serve (PR #29)
-- **#77 Automated PR lifecycle** — Copilot review loop (PR #30)
+- **#77 Automated PR lifecycle** — Copilot review loop
 - **#87 Feature session teardown** — self-report, postmortem, inbox
   delivery (PR #36)
 - **#104-106 Wiki** — first-class memory protocol (PR #35)

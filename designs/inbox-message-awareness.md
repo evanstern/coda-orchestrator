@@ -117,7 +117,7 @@ _orch_generate_project_config() {
 `_orch_start` auto-patches existing `opencode.json` files: on start, if
 `inbox.md` is not in the instructions array, append it via `jq`. This
 follows the existing pattern at `lifecycle.sh:215-216` where missing
-`AGENTS.md` and `opencode.json` are auto-generated. Non-destructive u2014
+`AGENTS.md` and `opencode.json` are auto-generated. Non-destructive —
 only adds, never removes.
 
 ### 5. tmux status bar badge (`lib/inbox-status.sh`)
