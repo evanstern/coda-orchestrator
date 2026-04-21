@@ -1,7 +1,7 @@
 # Design: Inbox-Based Inbound Message Awareness
 
 **Card:** #117
-**Status:** Draft
+**Status:** Implemented (PR #31)
 **Repos:** coda-orchestrator
 
 ## Problem

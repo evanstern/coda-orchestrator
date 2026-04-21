@@ -1,7 +1,12 @@
 # Design: Feature Session Spawn Pattern
 
-## Status: Validated
+## Status: Superseded
 ## Cards: #38, #39, #31
+
+> **Note:** Naming convention (`spawn/<slug>`, `--spawn-` session prefix) and
+> the `coda orch spawn` future section are superseded by
+> [overloaded-coda-feature-start.md](overloaded-coda-feature-start.md) and
+> the window-mode design. Retained for historical context.
 
 ## Problem
 

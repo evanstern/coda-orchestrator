@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+# Notify active orchestrators when a feature is being torn down.
+# Env: CODA_PROJECT_NAME, CODA_FEATURE_BRANCH, CODA_WORKTREE_DIR, CODA_SESSION_NAME
+#
+
+ORCH_BASE_DIR="${CODA_ORCH_DIR:-$HOME/.config/coda/orchestrators}"
+
+[ -d "$ORCH_BASE_DIR" ] || exit 0
+
+for dir in "$ORCH_BASE_DIR"/*/; do
+    [ -f "$dir/port" ] || continue
+
+    port=$(cat "$dir/port")
+    name=$(basename "$dir")
+    session="${SESSION_PREFIX:-coda-}orch--${name}"
+
+    tmux has-session -t "$session" 2>/dev/null || continue
+
+    scope_file="$dir/scope.json"
+    [ -f "$scope_file" ] || continue
+
+    watch_patterns=$(jq -r '.watch[]' "$scope_file" 2>/dev/null)
+    [ -n "$watch_patterns" ] || continue
+
+    match=false
+    while IFS= read -r pattern; do
+        # shellcheck disable=SC2254
+        case "${CODA_SESSION_NAME:-}" in $pattern) match=true ;; esac
+    done <<< "$watch_patterns"
+
+    $match || continue
+
+    opencode run --attach "http://localhost:$port" \
+        "[hook] Feature teardown: ${CODA_PROJECT_NAME:-unknown}/${CODA_FEATURE_BRANCH:-unknown} (session: ${CODA_SESSION_NAME:-unknown})" \
+        2>/dev/null &
+
+    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    printf '\n---\nfrom: hook\ntime: %s\n---\n[hook] Feature teardown: %s/%s (session: %s)\n' \
+        "$ts" "${CODA_PROJECT_NAME:-unknown}" "${CODA_FEATURE_BRANCH:-unknown}" "${CODA_SESSION_NAME:-unknown}" \
+        >> "$dir/inbox.md"
+done

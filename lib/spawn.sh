@@ -167,10 +167,9 @@ sys.exit(1)
 "
 }
 
-# Bootstrap sibling modules that the gitignored coda-handler.sh does not source
-# directly. Loading status.sh here ensures `_orch_status` (tree view) overrides
-# the legacy implementation in lib/observe.sh, since spawn.sh is sourced after
-# observe.sh in the handler's module loop.
+# Bootstrap sibling modules that coda-handler.sh does not source directly.
+# Loading status.sh here makes `_orch_status` (tree view) available to callers
+# of spawn.sh.
 _orch_spawn_dir="${BASH_SOURCE%/*}"
 if [ -f "$_orch_spawn_dir/status.sh" ]; then
     # shellcheck source=/dev/null
