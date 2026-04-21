@@ -2,7 +2,7 @@
 #
 # session-switcher.bats -- tests for session windows UI (#92)
 #
-# ALL TESTS SKIPPED: These test _orch_sessions, _orch_switch, and
+# ALL TESTS SKIPPED: These tests _orch_sessions, _orch_switch, and
 # _orch_scoped_sessions which are part of card #92 (session windows).
 # The implementation does not exist yet. When #92 ships, remove the
 # skip lines and verify.
@@ -14,7 +14,7 @@ setup() {
     export CODA_ORCH_PORT_RANGE=10
     export SESSION_PREFIX="coda-test-"
 
-    PLUGIN_DIR="${CODA_ORCH_PLUGIN_DIR:-$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)}"
+    PLUGIN_DIR="${CODA_ORCH_PLUGIN_DIR:-$(cd "$BATS_TEST_DIRNAME/.." && pwd)}"
     export _ORCH_PLUGIN_DIR="$PLUGIN_DIR"
     source "$PLUGIN_DIR/coda-handler.sh"
 }
