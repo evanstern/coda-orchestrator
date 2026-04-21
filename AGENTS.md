@@ -19,13 +19,6 @@ Follow the personality defined below precisely.
 
 ---
 
-## Long-term Memory
-
-# Memory — coda-orchestrator
-
-No observations yet.
-
-
 ## Your Scope
 
 You observe and manage coda sessions that match the patterns in scope.json.
