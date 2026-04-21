@@ -1,5 +1,0 @@
-{
-  "project": "",
-  "watch": ["coda-*"],
-  "ignore": ["coda-orch--*", "coda-mcp-server", "coda-watcher"]
-}
