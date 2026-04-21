@@ -35,9 +35,9 @@ AGENTS.md      — operating instructions for the agent
 
 ## Shipped
 
-- **#29 Soul-writer skill** — SOUL.md template + generation (PR #26)
+- **#29 Soul-writer skill** — SOUL.md template + generation
 - **#30 Evolving personality** — reflection, dreams, personality
-  islands (PR #26)
+  islands
 - **#76 Session pruning** — prune primitives for opencode serve (PR #29)
 - **#77 Automated PR lifecycle** — Copilot review loop
 - **#87 Feature session teardown** — self-report, postmortem, inbox
